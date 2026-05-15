@@ -54,7 +54,7 @@
       <button id="howBtn" class="secondary">Controls</button>
     </div>
     <div id="how" class="keys hidden">
-      <span class="pill">W / ↑</span> thrust, <span class="pill">A/D</span> or <span class="pill">←/→</span> rotate, <span class="pill">Space</span> fire, <span class="pill">Shift</span> boost, <span class="pill">P</span> pause, <span class="pill">M</span> mute. Touch controls appear on small screens.
+      <span class="pill">W / ↑</span> thrust, <span class="pill">A/D</span> or <span class="pill">←/→</span> rotate, <span class="pill">Space</span> fire, <span class="pill">Shift</span> boost, <span class="pill">P</span> radiation pulse ☢, <span class="pill">Esc</span> pause, <span class="pill">M</span> mute. Touch controls appear on small screens.
     </div>
   </div>
   <div id="gameOver" class="card hidden">
@@ -73,6 +73,7 @@
     <div class="touchBtn" data-touch="right">▶</div>
   </div>
   <div class="touchCluster">
+    <div class="touchBtn" data-touch="pulse">☢</div>
     <div class="touchBtn" data-touch="boost">✦</div>
     <div class="touchBtn" data-touch="fire">●</div>
   </div>
@@ -116,12 +117,17 @@
   addEventListener('keydown', e => {
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
     keys.add(e.code);
-    if(e.code === 'KeyP') togglePause();
+    if(e.code === 'Escape') togglePause();
     if(e.code === 'KeyM') audio.toggleMute();
+    if(e.code === 'KeyP' && state.mode==='playing' && state.ship) activateRadiationPulse();
   });
   addEventListener('keyup', e => keys.delete(e.code));
   document.querySelectorAll('[data-touch]').forEach(el => {
     const k = el.dataset.touch;
+    if(k === 'pulse'){
+      el.addEventListener('pointerdown', e => { e.preventDefault(); audio.ensure(); if(state.mode==='playing' && state.ship) activateRadiationPulse(); });
+      return;
+    }
     const on = e => { e.preventDefault(); touch[k] = true; audio.ensure(); };
     const off = e => { e.preventDefault(); touch[k] = false; };
     el.addEventListener('pointerdown', on);
@@ -164,7 +170,8 @@
     power(){ this.beep(660,.08,'sine',.2,440); setTimeout(()=>this.beep(990,.08,'sine',.2,520),70); },
     life(){ this.beep(523,.09,'sine',.18,0); setTimeout(()=>this.beep(659,.09,'sine',.18,0),85); setTimeout(()=>this.beep(784,.12,'sine',.18,0),170); },
     virus(){ this.beep(110,.25,'square',.12,80); },
-    playerHit(){ this.noise(.32,.35,900); this.beep(80,.35,'sawtooth',.2,-40); }
+    playerHit(){ this.noise(.32,.35,900); this.beep(80,.35,'sawtooth',.2,-40); },
+    radPulse(){ this.beep(80,.15,'sine',.32,-20); setTimeout(()=>this.beep(160,.22,'sine',.22,-90),50); this.noise(.28,.2,380); }
   };
 
   const tumorCatalog = [
@@ -189,7 +196,7 @@
 
   const state = {
     mode:'menu', score:0, wave:1, lives:3, high: Number(localStorage.getItem('fhAsteroidsHigh') || 0),
-    bullets:[], tumors:[], particles:[], powerups:[], enemies:[], enemyBullets:[], stars:[], floaters:[],
+    bullets:[], tumors:[], particles:[], powerups:[], enemies:[], enemyBullets:[], stars:[], floaters:[], pulseRings:[],
     ship:null, last:now(), nextVirus:12000, message:'', messageUntil:0, combo:0, comboUntil:0, shake:0, slowmo:0,
     stats:{tumors:0, viruses:0, discoveries:0}
   };
@@ -211,6 +218,7 @@
       this.x=W/2; this.y=H/2; this.vx=0; this.vy=0; this.a=-Math.PI/2; this.r=18;
       this.cool=0; this.invuln=2200; this.trail=[]; this.boostHeat=0;
       this.power={rapid:0, shield:0, triple:0, thrust:0, vaccine:0};
+      this.pulseCharges=2;
     }
     update(dt){
       const left = keys.has('ArrowLeft') || keys.has('KeyA') || touch.left;
@@ -287,7 +295,7 @@
     }
     update(dt){ this.x+=this.vx*dt; this.y+=this.vy*dt; this.a+=this.spin*dt; this.labelTimer-=dt*1000; wrap(this,this.r+8); }
     hit(b){
-      this.hp -= b.type.includes('vaccine') ? 1.6 : 1;
+      this.hp -= b.type==='radiation' ? 1.8 : b.type.includes('vaccine') ? 1.6 : 1;
       burst(this.x,this.y,this.kind.color,10+this.size*5,1.5+this.size*.7);
       audio.hit(); state.shake = Math.max(state.shake, 4 + this.size*2);
       if(this.hp<=0) this.destroy();
@@ -393,13 +401,13 @@
   function removeFrom(arr,obj){ const i=arr.indexOf(obj); if(i>=0) arr.splice(i,1); }
 
   function spawnPowerup(x,y,force=false){
-    const types=['rapid','shield','triple','thrust','vaccine','life'];
-    const type = force ? pick(types) : pick(['rapid','rapid','shield','triple','thrust','vaccine','life']);
+    const types=['rapid','shield','triple','thrust','vaccine','life','radpulse'];
+    const type = force ? pick(types) : pick(['rapid','rapid','shield','triple','thrust','vaccine','life','radpulse']);
     state.powerups.push({x,y,type,vx:rand(-60,60),vy:rand(-60,60),r:17,life:10000,pulse:rand(0,TAU)});
   }
 
   function powerName(type){
-    return ({rapid:'Rapid-fire assay', shield:'Protective shield', triple:'Triple-shot protocol', thrust:'Thruster grant', vaccine:'mRNA-guided volley', life:'Extra life'}[type] || type);
+    return ({rapid:'Rapid-fire assay', shield:'Protective shield', triple:'Triple-shot protocol', thrust:'Thruster grant', vaccine:'mRNA-guided volley', life:'Extra life', radpulse:'Radiation pulse charge'}[type] || type);
   }
 
   function applyPower(type){
@@ -410,6 +418,7 @@
     if(type==='triple'){ s.power.triple=11500; toast('Triple-shot protocol active.', 2600); audio.power(); }
     if(type==='thrust'){ s.power.thrust=10000; toast('Thruster grant awarded: high-mobility research sprint.', 2600); audio.power(); }
     if(type==='vaccine'){ s.power.vaccine=12000; toast('mRNA-guided volley active: shots gently home toward tumors.', 3100); audio.power(); }
+    if(type==='radpulse'){ s.pulseCharges=Math.min(5,s.pulseCharges+1); toast('Radiation pulse charge stored. Press P to release ionizing energy.', 2600); audio.power(); }
     state.stats.discoveries++;
   }
 
@@ -425,7 +434,7 @@
   function startGame(){
     audio.ensure();
     menu.classList.add('hidden'); gameOverPanel.classList.add('hidden'); overlay.style.display='none';
-    state.mode='playing'; state.score=0; state.wave=0; state.lives=3; state.bullets=[]; state.tumors=[]; state.powerups=[]; state.enemies=[]; state.enemyBullets=[]; state.particles=[]; state.floaters=[]; state.combo=0; state.stats={tumors:0,viruses:0,discoveries:0};
+    state.mode='playing'; state.score=0; state.wave=0; state.lives=3; state.bullets=[]; state.tumors=[]; state.powerups=[]; state.enemies=[]; state.enemyBullets=[]; state.particles=[]; state.floaters=[]; state.pulseRings=[]; state.combo=0; state.stats={tumors:0,viruses:0,discoveries:0};
     state.ship=new Ship(); state.nextVirus=now()+16000; toast('Mission start: translate discovery into impact.', 3000); nextWave();
   }
 
@@ -442,7 +451,7 @@
   }
 
   function togglePause(){
-    if(state.mode==='playing'){ state.mode='paused'; toast('Paused', 999999); overlay.style.display='flex'; menu.classList.remove('hidden'); menu.querySelector('h1').innerHTML='Paused <span>Mission</span>'; menu.querySelector('.subtitle').textContent='Press P or Start mission to resume. The current run is preserved.'; startBtn.textContent='Resume'; }
+    if(state.mode==='playing'){ state.mode='paused'; toast('Paused', 999999); overlay.style.display='flex'; menu.classList.remove('hidden'); menu.querySelector('h1').innerHTML='Paused <span>Mission</span>'; menu.querySelector('.subtitle').textContent='Press Esc or Start mission to resume. The current run is preserved.'; startBtn.textContent='Resume'; }
     else if(state.mode==='paused'){ state.mode='playing'; overlay.style.display='none'; toast('Resumed',900); }
   }
 
@@ -457,6 +466,18 @@
   menuBtn.addEventListener('click', () => { resetMenuText(); gameOverPanel.classList.add('hidden'); menu.classList.remove('hidden'); overlay.style.display='flex'; state.mode='menu'; });
   howBtn.addEventListener('click', () => how.classList.toggle('hidden'));
   addEventListener('pointerdown', () => audio.ensure(), {once:false, passive:true});
+
+  function activateRadiationPulse(){
+    const s=state.ship;
+    if(!s || s.pulseCharges<=0){ toast('No radiation pulses remaining. Collect \u2622 powerups to recharge.', 1800); return; }
+    s.pulseCharges--;
+    state.pulseRings.push({x:s.x, y:s.y, r:0, maxR:Math.max(W,H)*.78, life:1.5, max:1.5, hit:new Set()});
+    audio.radPulse();
+    burst(s.x, s.y, FH.gold, 22, 2.2);
+    addFloater('\u2622 Radiation Pulse!', s.x, s.y-38, FH.gold);
+    state.shake=Math.max(state.shake, 7);
+    toast('Radiation pulse released: ionizing energy sweeps the field.', 2600);
+  }
 
   function playerHit(){
     const s=state.ship; if(!s || s.invuln>0) return;
@@ -504,6 +525,12 @@
     state.particles.forEach(p=>{p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=Math.pow(.965,dt*60); p.vy*=Math.pow(.965,dt*60); p.life-=dt;});
     state.particles=state.particles.filter(p=>p.life>0);
     state.floaters.forEach(f=>{f.y+=f.vy*dt; f.life-=dt*1000;}); state.floaters=state.floaters.filter(f=>f.life>0);
+    state.pulseRings.forEach(p=>{ p.r+=(p.maxR/p.max)*dt; p.life-=dt; });
+    for(const p of state.pulseRings){
+      for(const t of state.tumors.slice()){ const d=Math.hypot(t.x-p.x,t.y-p.y); if(Math.abs(d-p.r)<(t.r+18)&&!p.hit.has(t)){ p.hit.add(t); t.hit({type:'radiation',pierce:0}); } }
+      for(const e of state.enemies.slice()){ const d=Math.hypot(e.x-p.x,e.y-p.y); if(Math.abs(d-p.r)<(e.r+18)&&!p.hit.has(e)){ p.hit.add(e); e.hit({type:'radiation',pierce:0}); } }
+    }
+    state.pulseRings=state.pulseRings.filter(p=>p.life>0);
     state.shake=Math.max(0,state.shake-dt*36);
 
     for(const b of state.bullets.slice()){
@@ -553,12 +580,12 @@
   }
 
   function drawPowerup(p){
-    const colors={rapid:FH.gold, shield:FH.green, triple:FH.cyan, thrust:'#ffffff', vaccine:FH.violet, life:FH.red}; const c=colors[p.type]||'#fff';
+    const colors={rapid:FH.gold, shield:FH.green, triple:FH.cyan, thrust:'#ffffff', vaccine:FH.violet, life:FH.red, radpulse:FH.gold}; const c=colors[p.type]||'#fff';
     ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.pulse*.3); ctx.globalAlpha=clamp(p.life/900,0,1);
     ctx.shadowBlur=22; ctx.shadowColor=c; ctx.strokeStyle=c; ctx.lineWidth=2; ctx.fillStyle='rgba(8,18,36,.86)';
     ctx.beginPath(); ctx.roundRect(-17,-17,34,34,8); ctx.fill(); ctx.stroke();
     ctx.fillStyle=c; ctx.font='bold 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    const icon={rapid:'⚡', shield:'◌', triple:'≋', thrust:'▲', vaccine:'m', life:'+'}[p.type]||'?'; ctx.fillText(icon,0,1);
+    const icon={rapid:'⚡', shield:'◌', triple:'≋', thrust:'▲', vaccine:'m', life:'+', radpulse:'☢'}[p.type]||'?'; ctx.fillText(icon,0,1);
     ctx.restore();
   }
 
@@ -568,9 +595,9 @@
     const panelW=Math.min(380,W-24);
     glass(12,12,panelW,98);
     ctx.fillStyle='#fff'; ctx.font='900 20px system-ui'; ctx.fillText('Fred Hutch Asteroids',28,40);
-    ctx.fillStyle='#b9d8e6'; ctx.font='700 14px system-ui'; ctx.fillText(`Score ${state.score.toLocaleString()}   High ${state.high.toLocaleString()}   Wave ${state.wave}`,28,64);
-    ctx.fillText(`Lives ${'♥'.repeat(Math.max(0,state.lives))}`,28,86);
     const s=state.ship; let x=panelW-160, y=30;
+    ctx.fillStyle='#b9d8e6'; ctx.font='700 14px system-ui'; ctx.fillText(`Score ${state.score.toLocaleString()}   High ${state.high.toLocaleString()}   Wave ${state.wave}`,28,64);
+    ctx.fillText(`Lives ${'♥'.repeat(Math.max(0,state.lives))}  \u2622 ${s ? s.pulseCharges : 0}`,28,86);
     drawTimers(s.power, x, y);
     if(state.combo>1 && state.comboUntil>0){
       glass(W-168, 12, 150, 42); ctx.fillStyle=FH.gold; ctx.font='900 18px system-ui'; ctx.textAlign='center'; ctx.fillText(`${state.combo}x Discovery Combo`, W-93,39);
@@ -601,6 +628,33 @@
     ctx.fillText(line.trim(),x,yy);
   }
 
+  function drawPulseRings(){
+    for(const p of state.pulseRings){
+      const t=clamp(p.life/p.max,0,1);
+      ctx.save();
+      // Broad soft inner glow ring
+      ctx.globalAlpha=t*0.3;
+      ctx.strokeStyle='rgba(255,240,140,0.9)';
+      ctx.lineWidth=22+(1-t)*24;
+      ctx.shadowBlur=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(0,p.r-4),0,TAU); ctx.stroke();
+      // Sharp bright outer edge
+      ctx.globalAlpha=t*0.92;
+      ctx.strokeStyle=`rgba(255,181,0,${t})`;
+      ctx.lineWidth=3+(1-t)*6;
+      ctx.shadowBlur=44; ctx.shadowColor=FH.gold;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,TAU); ctx.stroke();
+      // Second trailing ring slightly behind
+      ctx.globalAlpha=t*0.38;
+      ctx.strokeStyle='rgba(255,220,80,0.7)';
+      ctx.lineWidth=2;
+      ctx.shadowBlur=20;
+      ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(0,p.r*0.82),0,TAU); ctx.stroke();
+      ctx.restore();
+      ctx.shadowBlur=0; ctx.globalAlpha=1;
+    }
+  }
+
   function render(){
     drawBackground();
     if(state.shake>0){ ctx.save(); ctx.translate(rand(-state.shake,state.shake),rand(-state.shake,state.shake)); }
@@ -609,6 +663,7 @@
     state.enemyBullets.forEach(drawEnemyBullet);
     state.tumors.forEach(t=>t.draw());
     state.enemies.forEach(e=>e.draw());
+    drawPulseRings();
     if(state.ship) state.ship.draw();
     for(const p of state.particles){ ctx.globalAlpha=clamp(p.life/p.max,0,1); ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*clamp(p.life/p.max,.2,1),0,TAU); ctx.fill(); }
     ctx.globalAlpha=1;
