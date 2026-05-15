@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Fred Hutch Asteroids</title>
+<style>
+  :root{
+    --fh-navy:#1B365D;
+    --fh-cyan:#00ABC8;
+    --fh-gold:#FFB500;
+    --fh-violet:#AA4AC4;
+    --danger:#ff477e;
+    --good:#58ffb4;
+    --ink:#eaf7ff;
+    --panel:rgba(10,18,35,.72);
+  }
+  html, body { margin:0; height:100%; overflow:hidden; background:#030712; color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  canvas { display:block; width:100vw; height:100vh; background: radial-gradient(circle at 50% 50%, #112046 0%, #07111f 55%, #02040b 100%); }
+  #overlay { position:fixed; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; }
+  .card { pointer-events:auto; width:min(880px, calc(100vw - 36px)); padding:28px; border:1px solid rgba(109,221,255,.28); border-radius:28px; background:linear-gradient(135deg, rgba(9,19,38,.86), rgba(21,11,43,.82)); box-shadow:0 0 40px rgba(0,171,200,.22), inset 0 0 60px rgba(255,255,255,.03); backdrop-filter: blur(12px); }
+  .hidden { display:none !important; }
+  h1 { margin:0 0 8px; font-size: clamp(36px, 7vw, 82px); letter-spacing:-.06em; line-height:.9; }
+  h1 span { color:var(--fh-cyan); text-shadow:0 0 28px rgba(0,171,200,.7); }
+  .subtitle { color:#b8d7e6; font-size: clamp(15px, 2.2vw, 20px); margin:0 0 22px; max-width:780px; }
+  .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; margin:20px 0; }
+  .mini { border:1px solid rgba(255,255,255,.13); border-radius:18px; padding:14px 15px; background:rgba(255,255,255,.055); min-height:78px; }
+  .mini strong { display:block; color:#fff; margin-bottom:6px; }
+  .mini small { color:#b8cce0; line-height:1.35; }
+  button { border:0; color:#03101a; background:linear-gradient(135deg, var(--fh-cyan), #7df3ff); font-weight:800; border-radius:999px; padding:14px 22px; font-size:16px; box-shadow:0 10px 30px rgba(0,171,200,.28); cursor:pointer; }
+  button.secondary { color:#eaf7ff; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); box-shadow:none; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .keys { color:#c5d5e3; margin-top:15px; font-size:14px; line-height:1.55; }
+  .pill { display:inline-block; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); border-radius:999px; padding:2px 8px; margin:0 2px; color:#fff; font-weight:700; }
+  #touchControls { position:fixed; inset:auto 0 16px 0; display:none; justify-content:space-between; padding:0 18px; pointer-events:none; }
+  .touchCluster { display:flex; gap:10px; pointer-events:auto; }
+  .touchBtn { width:64px; height:64px; border-radius:22px; border:1px solid rgba(255,255,255,.16); background:rgba(9,18,33,.48); color:white; display:grid; place-items:center; font-weight:900; font-size:20px; backdrop-filter:blur(8px); user-select:none; }
+  @media (max-width:700px){ .grid{grid-template-columns:1fr;} .card{padding:21px;} #touchControls{display:flex;} }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Fred Hutch Asteroids arcade game"></canvas>
+<div id="overlay">
+  <div id="menu" class="card">
+    <h1>Fred Hutch <span>Asteroids</span></h1>
+    <p class="subtitle">Pilot the Fred Hutch discovery craft through a living starfield. Break tumors into smaller targets, collect translational research boosts, and watch out for oncoviruses that fire back.</p>
+    <div class="grid">
+      <div class="mini"><strong>Therapy Arsenal</strong><small>Killer T-cells, mRNA guidance, radiation pulses, chemo bursts, and vaccine volleys.</small></div>
+      <div class="mini"><strong>Research Powerups</strong><small>Rapid fire, shield, triple shot, thruster boost, extra life, and homing vaccine mode.</small></div>
+      <div class="mini"><strong>Arcade Learning</strong><small>Short science notes appear as you clear waves, without turning the game into homework.</small></div>
+    </div>
+    <div class="row">
+      <button id="startBtn">Start mission</button>
+      <button id="howBtn" class="secondary">Controls</button>
+    </div>
+    <div id="how" class="keys hidden">
+      <span class="pill">W / ↑</span> thrust, <span class="pill">A/D</span> or <span class="pill">←/→</span> rotate, <span class="pill">Space</span> fire, <span class="pill">Shift</span> boost, <span class="pill">P</span> pause, <span class="pill">M</span> mute. Touch controls appear on small screens.
+    </div>
+  </div>
+  <div id="gameOver" class="card hidden">
+    <h1>Mission <span>Report</span></h1>
+    <p id="finalText" class="subtitle"></p>
+    <div class="row">
+      <button id="restartBtn">Launch again</button>
+      <button id="menuBtn" class="secondary">Back to title</button>
+    </div>
+  </div>
+</div>
+<div id="touchControls">
+  <div class="touchCluster">
+    <div class="touchBtn" data-touch="left">◀</div>
+    <div class="touchBtn" data-touch="thrust">▲</div>
+    <div class="touchBtn" data-touch="right">▶</div>
+  </div>
+  <div class="touchCluster">
+    <div class="touchBtn" data-touch="boost">✦</div>
+    <div class="touchBtn" data-touch="fire">●</div>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const menu = document.getElementById('menu');
+  const gameOverPanel = document.getElementById('gameOver');
+  const finalText = document.getElementById('finalText');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const menuBtn = document.getElementById('menuBtn');
+  const howBtn = document.getElementById('howBtn');
+  const how = document.getElementById('how');
+
+  const TAU = Math.PI * 2;
+  const FH = { navy:'#1B365D', cyan:'#00ABC8', gold:'#FFB500', violet:'#AA4AC4', green:'#58ffb4', red:'#ff477e' };
+  const rand = (a,b) => a + Math.random() * (b-a);
+  const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const dist2 = (a,b) => { const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; };
+  const now = () => performance.now();
+
+  let W=0, H=0, DPR=1;
+  function resize(){
+    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    W = Math.floor(innerWidth); H = Math.floor(innerHeight);
+    canvas.width = Math.floor(W*DPR); canvas.height = Math.floor(H*DPR);
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  addEventListener('resize', resize, {passive:true}); resize();
+
+  const keys = new Set();
+  const touch = {left:false,right:false,thrust:false,fire:false,boost:false};
+  addEventListener('keydown', e => {
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+    keys.add(e.code);
+    if(e.code === 'KeyP') togglePause();
+    if(e.code === 'KeyM') audio.toggleMute();
+  });
+  addEventListener('keyup', e => keys.delete(e.code));
+  document.querySelectorAll('[data-touch]').forEach(el => {
+    const k = el.dataset.touch;
+    const on = e => { e.preventDefault(); touch[k] = true; audio.ensure(); };
+    const off = e => { e.preventDefault(); touch[k] = false; };
+    el.addEventListener('pointerdown', on);
+    el.addEventListener('pointerup', off);
+    el.addEventListener('pointercancel', off);
+    el.addEventListener('pointerleave', off);
+  });
+
+  const audio = {
+    ctx:null, muted:false, master:null,
+    ensure(){
+      if(this.ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.19;
+      this.master.connect(this.ctx.destination);
+    },
+    toggleMute(){ this.muted = !this.muted; toast(this.muted ? 'Sound muted' : 'Sound on', 1300); },
+    beep(freq=440, dur=.08, type='sine', gain=.3, slide=0){
+      if(this.muted) return; this.ensure(); if(!this.ctx) return;
+      const t=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type=type; o.frequency.setValueAtTime(freq,t);
+      if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq+slide), t+dur);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g); g.connect(this.master); o.start(t); o.stop(t+dur+.02);
+    },
+    noise(dur=.16, gain=.25, filter=800){
+      if(this.muted) return; this.ensure(); if(!this.ctx) return;
+      const t=this.ctx.currentTime, buffer=this.ctx.createBuffer(1, this.ctx.sampleRate*dur, this.ctx.sampleRate);
+      const data=buffer.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
+      const src=this.ctx.createBufferSource(); src.buffer=buffer;
+      const f=this.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=filter;
+      const g=this.ctx.createGain(); g.gain.value=gain;
+      src.connect(f); f.connect(g); g.connect(this.master); src.start(t);
+    },
+    fire(){ this.beep(880,.055,'triangle',.18,-220); },
+    hit(){ this.beep(160,.13,'sawtooth',.28,-90); this.noise(.08,.12,500); },
+    power(){ this.beep(660,.08,'sine',.2,440); setTimeout(()=>this.beep(990,.08,'sine',.2,520),70); },
+    life(){ this.beep(523,.09,'sine',.18,0); setTimeout(()=>this.beep(659,.09,'sine',.18,0),85); setTimeout(()=>this.beep(784,.12,'sine',.18,0),170); },
+    virus(){ this.beep(110,.25,'square',.12,80); },
+    playerHit(){ this.noise(.32,.35,900); this.beep(80,.35,'sawtooth',.2,-40); }
+  };
+
+  const tumorCatalog = [
+    {name:'Carcinoma', color:'#ff7aa8', edge:'#ffd1df', fact:'Carcinomas begin in epithelial tissues, which line organs and body surfaces.'},
+    {name:'Sarcoma', color:'#ffb84f', edge:'#fff0aa', fact:'Sarcomas arise from connective tissues such as bone, muscle, fat, or cartilage.'},
+    {name:'Leukemia Cell', color:'#b790ff', edge:'#eadbff', fact:'Leukemias affect blood-forming tissues and often require systemic treatment strategies.'},
+    {name:'Melanoma', color:'#45d7ff', edge:'#c7f6ff', fact:'Melanoma starts in pigment-producing melanocytes and can be immunotherapy-responsive.'},
+    {name:'Glioma', color:'#64f29b', edge:'#dcffe9', fact:'Gliomas occur in glial cells of the brain or spinal cord.'},
+    {name:'Lymphoma', color:'#ff5fd7', edge:'#ffd5f5', fact:'Lymphomas involve lymphocytes, key cells of the immune system.'}
+  ];
+
+  const therapyFacts = [
+    'Killer T-cells are immune cells that can recognize and destroy abnormal cells.',
+    'CAR-T therapy engineers a patient’s T-cells to better recognize specific cancer targets.',
+    'mRNA vaccine research explores ways to teach immune cells what tumor signals look like.',
+    'Radiation therapy uses targeted energy to damage cancer-cell DNA.',
+    'Chemotherapy can attack fast-dividing cells and is often combined with other treatments.',
+    'Clinical trials help turn scientific discoveries into safer, better treatments.',
+    'Precision oncology matches treatment strategy to tumor biology when actionable information is available.',
+    'Supportive care matters too: treatment is about people, not just cells.'
+  ];
+
+  const state = {
+    mode:'menu', score:0, wave:1, lives:3, high: Number(localStorage.getItem('fhAsteroidsHigh') || 0),
+    bullets:[], tumors:[], particles:[], powerups:[], enemies:[], enemyBullets:[], stars:[], floaters:[],
+    ship:null, last:now(), nextVirus:12000, message:'', messageUntil:0, combo:0, comboUntil:0, shake:0, slowmo:0,
+    stats:{tumors:0, viruses:0, discoveries:0}
+  };
+
+  function wrap(o, pad=40){
+    if(o.x < -pad) o.x = W + pad; if(o.x > W + pad) o.x = -pad;
+    if(o.y < -pad) o.y = H + pad; if(o.y > H + pad) o.y = -pad;
+  }
+
+  function makeStars(){
+    state.stars = [];
+    const n = Math.floor((W*H)/5600);
+    for(let i=0;i<n;i++) state.stars.push({x:Math.random()*W,y:Math.random()*H,z:rand(.2,1.4),tw:rand(0,TAU),r:rand(.4,1.6)});
+  }
+  makeStars(); addEventListener('resize', makeStars, {passive:true});
+
+  class Ship {
+    constructor(){
+      this.x=W/2; this.y=H/2; this.vx=0; this.vy=0; this.a=-Math.PI/2; this.r=18;
+      this.cool=0; this.invuln=2200; this.trail=[]; this.boostHeat=0;
+      this.power={rapid:0, shield:0, triple:0, thrust:0, vaccine:0};
+    }
+    update(dt){
+      const left = keys.has('ArrowLeft') || keys.has('KeyA') || touch.left;
+      const right = keys.has('ArrowRight') || keys.has('KeyD') || touch.right;
+      const thrusting = keys.has('ArrowUp') || keys.has('KeyW') || touch.thrust;
+      const boosting = keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.boost;
+      const turn = 4.35 * dt;
+      if(left) this.a -= turn; if(right) this.a += turn;
+      const boost = boosting ? 1.75 : 1;
+      const thrustPower = (this.power.thrust>0 ? 390 : 260) * boost;
+      if(thrusting){
+        this.vx += Math.cos(this.a)*thrustPower*dt; this.vy += Math.sin(this.a)*thrustPower*dt;
+        this.trail.push({x:this.x-Math.cos(this.a)*22+rand(-2,2),y:this.y-Math.sin(this.a)*22+rand(-2,2),life:1,size:rand(3,8)});
+        if(Math.random()<.16) audio.beep(rand(70,110),.025,'sawtooth',.035,20);
+      }
+      const max = this.power.thrust>0 ? 520 : 385;
+      const sp = Math.hypot(this.vx,this.vy);
+      if(sp>max){ this.vx=this.vx/sp*max; this.vy=this.vy/sp*max; }
+      this.vx *= Math.pow(.985, dt*60); this.vy *= Math.pow(.985, dt*60);
+      this.x += this.vx*dt; this.y += this.vy*dt; wrap(this, 25);
+      this.cool -= dt*1000; this.invuln -= dt*1000;
+      for(const k in this.power) this.power[k]=Math.max(0,this.power[k]-dt*1000);
+      this.trail.forEach(t=>t.life-=dt*2.3); this.trail=this.trail.filter(t=>t.life>0);
+      if((keys.has('Space') || touch.fire) && this.cool<=0) this.fire();
+    }
+    fire(){
+      const rapid = this.power.rapid>0;
+      const triple = this.power.triple>0;
+      const vaccine = this.power.vaccine>0;
+      this.cool = rapid ? 82 : 175;
+      const angles = triple ? [-.24,0,.24] : [0];
+      for(const da of angles){
+        const a=this.a+da; const speed = vaccine ? 650 : 560;
+        state.bullets.push({x:this.x+Math.cos(a)*20,y:this.y+Math.sin(a)*20,vx:this.vx*.28+Math.cos(a)*speed,vy:this.vy*.28+Math.sin(a)*speed,a,life:vaccine?1180:940,r:vaccine?4.5:3.2,type:vaccine?'mRNA-guided vaccine':'killer T-cell',pierce:vaccine?1:0});
+      }
+      audio.fire();
+    }
+    draw(){
+      for(const t of this.trail){
+        ctx.globalAlpha = Math.max(0,t.life)*.72;
+        const g=ctx.createRadialGradient(t.x,t.y,0,t.x,t.y,t.size*3);
+        g.addColorStop(0,FH.gold); g.addColorStop(.45,FH.cyan); g.addColorStop(1,'transparent');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(t.x,t.y,t.size*3,0,TAU); ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.a);
+      if(this.invuln>0 && Math.floor(this.invuln/100)%2===0){ ctx.globalAlpha=.38; }
+      ctx.shadowBlur=22; ctx.shadowColor=FH.cyan;
+      const grad=ctx.createLinearGradient(-22,-14,28,14); grad.addColorStop(0,'#dffbff'); grad.addColorStop(.42,FH.cyan); grad.addColorStop(1,FH.navy);
+      ctx.fillStyle=grad; ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.6;
+      ctx.beginPath(); ctx.moveTo(25,0); ctx.lineTo(-18,-14); ctx.lineTo(-11,0); ctx.lineTo(-18,14); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.fillStyle=FH.gold; ctx.beginPath(); ctx.moveTo(4,-6); ctx.lineTo(15,0); ctx.lineTo(4,6); ctx.closePath(); ctx.fill();
+      ctx.rotate(-this.a); ctx.fillStyle='rgba(255,255,255,.9)'; ctx.font='bold 9px system-ui'; ctx.textAlign='center'; ctx.fillText('FH',0,3);
+      ctx.restore(); ctx.globalAlpha=1;
+      if(this.power.shield>0 || this.invuln>0){
+        const alpha = this.power.shield>0 ? .72 : .35;
+        ctx.save(); ctx.globalAlpha=alpha; ctx.strokeStyle=this.power.shield>0?FH.green:FH.cyan; ctx.lineWidth=2;
+        ctx.shadowBlur=18; ctx.shadowColor=this.power.shield>0?FH.green:FH.cyan;
+        ctx.beginPath(); ctx.arc(this.x,this.y,31 + Math.sin(now()/120)*2,0,TAU); ctx.stroke(); ctx.restore();
+      }
+    }
+  }
+
+  class Tumor {
+    constructor(x,y,size=3, kind=pick(tumorCatalog), vx=null, vy=null){
+      this.x=x; this.y=y; this.size=size; this.kind=kind; this.r=[0,18,33,55][size] + rand(-2,2);
+      const sp = [0,88,64,42][size] * rand(.72,1.3);
+      const a = rand(0,TAU);
+      this.vx = vx ?? Math.cos(a)*sp; this.vy = vy ?? Math.sin(a)*sp;
+      this.spin=rand(-1.1,1.1); this.a=rand(0,TAU); this.hp=size; this.seed=Math.random()*9999;
+      this.points=Array.from({length:Math.floor(rand(10,16))}, (_,i)=>({ang:i/12*TAU + rand(-.08,.08), rad:rand(.72,1.16)}));
+      this.labelTimer=3500;
+    }
+    update(dt){ this.x+=this.vx*dt; this.y+=this.vy*dt; this.a+=this.spin*dt; this.labelTimer-=dt*1000; wrap(this,this.r+8); }
+    hit(b){
+      this.hp -= b.type.includes('vaccine') ? 1.6 : 1;
+      burst(this.x,this.y,this.kind.color,10+this.size*5,1.5+this.size*.7);
+      audio.hit(); state.shake = Math.max(state.shake, 4 + this.size*2);
+      if(this.hp<=0) this.destroy();
+    }
+    destroy(){
+      state.score += this.size*100 + state.combo*15;
+      state.combo++; state.comboUntil=1900;
+      state.stats.tumors++;
+      addFloater('+'+(this.size*100), this.x, this.y, this.kind.color);
+      if(Math.random()<.28 || state.tumors.length<2) spawnPowerup(this.x,this.y);
+      toast(pick([this.kind.fact, pick(therapyFacts)]), 4300);
+      if(this.size>1){
+        const n=this.size===3?3:2;
+        for(let i=0;i<n;i++){
+          const a=rand(0,TAU), sp=rand(80,150)+(3-this.size)*35;
+          state.tumors.push(new Tumor(this.x+Math.cos(a)*10,this.y+Math.sin(a)*10,this.size-1,this.kind,Math.cos(a)*sp+this.vx*.25,Math.sin(a)*sp+this.vy*.25));
+        }
+      }
+      removeFrom(state.tumors,this);
+      if(state.tumors.length===0) nextWave();
+    }
+    draw(){
+      ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.a);
+      ctx.shadowBlur=18; ctx.shadowColor=this.kind.color;
+      const g=ctx.createRadialGradient(-this.r*.25,-this.r*.2,2,0,0,this.r*1.2);
+      g.addColorStop(0,'rgba(255,255,255,.92)'); g.addColorStop(.14,this.kind.edge); g.addColorStop(.42,this.kind.color); g.addColorStop(1,'rgba(60,5,38,.9)');
+      ctx.fillStyle=g; ctx.strokeStyle=this.kind.edge; ctx.lineWidth=2;
+      ctx.beginPath();
+      for(let i=0;i<this.points.length;i++){
+        const p=this.points[i]; const x=Math.cos(p.ang)*p.rad*this.r, y=Math.sin(p.ang)*p.rad*this.r;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.shadowBlur=0;
+      ctx.globalAlpha=.46; ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1;
+      for(let i=0;i<Math.min(6,this.size*2+1);i++){
+        const a=this.seed+i*1.7; const x=Math.cos(a)*this.r*rand(.12,.45), y=Math.sin(a*1.2)*this.r*rand(.12,.45);
+        ctx.beginPath(); ctx.arc(x,y,rand(2,5)*this.size*.55,0,TAU); ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+      ctx.restore();
+      if(this.labelTimer>0 && this.size>=2){
+        ctx.save(); ctx.globalAlpha=clamp(this.labelTimer/1000,0,.85); ctx.font='bold 12px system-ui'; ctx.textAlign='center'; ctx.fillStyle='#eaf7ff';
+        ctx.fillText(this.kind.name, this.x, this.y-this.r-10); ctx.restore();
+      }
+    }
+  }
+
+  class Virus {
+    constructor(){
+      const side = Math.floor(rand(0,4));
+      if(side===0){this.x=-50;this.y=rand(60,H-60);this.vx=rand(75,120);this.vy=rand(-35,35);} 
+      else if(side===1){this.x=W+50;this.y=rand(60,H-60);this.vx=-rand(75,120);this.vy=rand(-35,35);} 
+      else if(side===2){this.x=rand(60,W-60);this.y=-50;this.vx=rand(-35,35);this.vy=rand(75,120);} 
+      else {this.x=rand(60,W-60);this.y=H+50;this.vx=rand(-35,35);this.vy=-rand(75,120);} 
+      this.r=26; this.hp=4+Math.floor(state.wave/3); this.a=0; this.fireCool=1300; this.life=18000;
+      audio.virus(); toast('Oncovirus detected: it shoots back. Prioritize containment.', 3500);
+    }
+    update(dt){
+      this.a += dt*2; this.x+=this.vx*dt; this.y+=this.vy*dt; this.life-=dt*1000; this.fireCool-=dt*1000;
+      if(this.x<50 || this.x>W-50) this.vx*=-1; if(this.y<50 || this.y>H-50) this.vy*=-1;
+      if(this.fireCool<=0 && state.ship){ this.fireCool=rand(850,1450); this.shoot(); }
+      if(this.life<=0) removeFrom(state.enemies,this);
+    }
+    shoot(){
+      const s=state.ship; const a=Math.atan2(s.y-this.y,s.x-this.x)+rand(-.18,.18); const speed=260+state.wave*8;
+      state.enemyBullets.push({x:this.x+Math.cos(a)*this.r,y:this.y+Math.sin(a)*this.r,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,r:5,life:3600,a});
+      audio.beep(240,.08,'square',.13,-80);
+    }
+    hit(b){
+      this.hp--; burst(this.x,this.y,FH.violet,16,2); audio.hit();
+      if(this.hp<=0){
+        state.score += 750; state.stats.viruses++; addFloater('+750 virus contained', this.x,this.y,FH.violet); spawnPowerup(this.x,this.y,true); burst(this.x,this.y,FH.violet,50,4); removeFrom(state.enemies,this); toast('Virus contained. Immune surveillance bonus awarded.', 3200);
+      }
+    }
+    draw(){
+      ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.a);
+      ctx.shadowBlur=22; ctx.shadowColor=FH.violet;
+      ctx.fillStyle='rgba(170,74,196,.9)'; ctx.strokeStyle='#f5d6ff'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(0,0,this.r,0,TAU); ctx.fill(); ctx.stroke();
+      for(let i=0;i<12;i++){
+        const a=i/12*TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a)*this.r*.75,Math.sin(a)*this.r*.75); ctx.lineTo(Math.cos(a)*(this.r+12+Math.sin(now()/170+i)*4),Math.sin(a)*(this.r+12+Math.sin(now()/170+i)*4)); ctx.stroke();
+      }
+      ctx.fillStyle='#22082f'; ctx.beginPath(); ctx.arc(-8,-4,4,0,TAU); ctx.arc(8,4,4,0,TAU); ctx.fill();
+      ctx.restore(); ctx.shadowBlur=0;
+    }
+  }
+
+  function removeFrom(arr,obj){ const i=arr.indexOf(obj); if(i>=0) arr.splice(i,1); }
+
+  function spawnPowerup(x,y,force=false){
+    const types=['rapid','shield','triple','thrust','vaccine','life'];
+    const type = force ? pick(types) : pick(['rapid','rapid','shield','triple','thrust','vaccine','life']);
+    state.powerups.push({x,y,type,vx:rand(-60,60),vy:rand(-60,60),r:17,life:10000,pulse:rand(0,TAU)});
+  }
+
+  function powerName(type){
+    return ({rapid:'Rapid-fire assay', shield:'Protective shield', triple:'Triple-shot protocol', thrust:'Thruster grant', vaccine:'mRNA-guided volley', life:'Extra life'}[type] || type);
+  }
+
+  function applyPower(type){
+    const s=state.ship;
+    if(type==='life'){ state.lives++; audio.life(); toast('Extra life: another patient-centered chance.', 2600); }
+    if(type==='rapid'){ s.power.rapid=10500; toast('Rapid-fire assay active: faster T-cell shots.', 2600); audio.power(); }
+    if(type==='shield'){ s.power.shield=9000; toast('Shield active: absorb one or more hits while it lasts.', 2600); audio.power(); }
+    if(type==='triple'){ s.power.triple=11500; toast('Triple-shot protocol active.', 2600); audio.power(); }
+    if(type==='thrust'){ s.power.thrust=10000; toast('Thruster grant awarded: high-mobility research sprint.', 2600); audio.power(); }
+    if(type==='vaccine'){ s.power.vaccine=12000; toast('mRNA-guided volley active: shots gently home toward tumors.', 3100); audio.power(); }
+    state.stats.discoveries++;
+  }
+
+  function burst(x,y,color,count=18,power=2){
+    for(let i=0;i<count;i++){
+      const a=rand(0,TAU), sp=rand(40,210)*power, life=rand(.35,1.1);
+      state.particles.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,color,life,max:life,r:rand(1.2,3.8)*power});
+    }
+  }
+  function addFloater(text,x,y,color='#fff'){ state.floaters.push({text,x,y,vy:-35,life:1300,color}); }
+  function toast(text, ms=2600){ state.message=text; state.messageUntil=now()+ms; }
+
+  function startGame(){
+    audio.ensure();
+    menu.classList.add('hidden'); gameOverPanel.classList.add('hidden'); overlay.style.display='none';
+    state.mode='playing'; state.score=0; state.wave=0; state.lives=3; state.bullets=[]; state.tumors=[]; state.powerups=[]; state.enemies=[]; state.enemyBullets=[]; state.particles=[]; state.floaters=[]; state.combo=0; state.stats={tumors:0,viruses:0,discoveries:0};
+    state.ship=new Ship(); state.nextVirus=now()+16000; toast('Mission start: translate discovery into impact.', 3000); nextWave();
+  }
+
+  function nextWave(){
+    state.wave++;
+    state.combo=0;
+    const count = Math.min(5+state.wave, 13);
+    for(let i=0;i<count;i++){
+      let x,y; do { x=rand(0,W); y=rand(0,H); } while(Math.hypot(x-W/2,y-H/2)<180);
+      state.tumors.push(new Tumor(x,y, i%5===0 && state.wave>2 ? 2 : 3));
+    }
+    state.score += state.wave>1 ? 450 : 0;
+    toast(`Wave ${state.wave}: tumor board launched ${count} targets.`, 3000);
+  }
+
+  function togglePause(){
+    if(state.mode==='playing'){ state.mode='paused'; toast('Paused', 999999); overlay.style.display='flex'; menu.classList.remove('hidden'); menu.querySelector('h1').innerHTML='Paused <span>Mission</span>'; menu.querySelector('.subtitle').textContent='Press P or Start mission to resume. The current run is preserved.'; startBtn.textContent='Resume'; }
+    else if(state.mode==='paused'){ state.mode='playing'; overlay.style.display='none'; toast('Resumed',900); }
+  }
+
+  function resetMenuText(){
+    menu.querySelector('h1').innerHTML='Fred Hutch <span>Asteroids</span>';
+    menu.querySelector('.subtitle').textContent='Pilot the Fred Hutch discovery craft through a living starfield. Break tumors into smaller targets, collect translational research boosts, and watch out for oncoviruses that fire back.';
+    startBtn.textContent='Start mission';
+  }
+
+  startBtn.addEventListener('click', () => { if(state.mode==='paused') togglePause(); else startGame(); });
+  restartBtn.addEventListener('click', startGame);
+  menuBtn.addEventListener('click', () => { resetMenuText(); gameOverPanel.classList.add('hidden'); menu.classList.remove('hidden'); overlay.style.display='flex'; state.mode='menu'; });
+  howBtn.addEventListener('click', () => how.classList.toggle('hidden'));
+  addEventListener('pointerdown', () => audio.ensure(), {once:false, passive:true});
+
+  function playerHit(){
+    const s=state.ship; if(!s || s.invuln>0) return;
+    if(s.power.shield>0){ s.power.shield=Math.max(0,s.power.shield-4200); burst(s.x,s.y,FH.green,34,2.6); toast('Shield absorbed the hit.', 1600); audio.power(); return; }
+    state.lives--; s.invuln=2500; s.x=W/2; s.y=H/2; s.vx=0; s.vy=0; state.shake=18; audio.playerHit(); burst(s.x,s.y,FH.cyan,60,4);
+    toast(state.lives>0 ? 'Discovery craft repaired. Re-entering the field.' : 'Mission complete. The work continues.', 3200);
+    if(state.lives<=0) endGame();
+  }
+
+  function endGame(){
+    state.mode='over'; overlay.style.display='flex'; gameOverPanel.classList.remove('hidden'); menu.classList.add('hidden'); resetMenuText();
+    if(state.score>state.high){ state.high=state.score; localStorage.setItem('fhAsteroidsHigh', String(state.high)); }
+    finalText.innerHTML = `Score: <b>${state.score.toLocaleString()}</b><br>Waves cleared: <b>${Math.max(0,state.wave-1)}</b><br>Tumor fragments neutralized: <b>${state.stats.tumors}</b><br>Viruses contained: <b>${state.stats.viruses}</b><br>Powerups translated into impact: <b>${state.stats.discoveries}</b><br>High score: <b>${state.high.toLocaleString()}</b>`;
+  }
+
+  function nearestTumor(x,y){
+    let best=null, bd=Infinity; const all=state.tumors.concat(state.enemies);
+    for(const t of all){ const d=(t.x-x)*(t.x-x)+(t.y-y)*(t.y-y); if(d<bd){bd=d; best=t;} }
+    return best;
+  }
+
+  function update(dt){
+    if(state.mode!=='playing') return;
+    dt = Math.min(dt, .034);
+    const s=state.ship; s.update(dt);
+
+    if(now()>state.nextVirus){ state.enemies.push(new Virus()); state.nextVirus=now()+rand(22000,34000)-Math.min(state.wave*800,10000); }
+    if(state.comboUntil>0){ state.comboUntil-=dt*1000; if(state.comboUntil<=0) state.combo=0; }
+
+    for(const st of state.stars){ st.y += st.z*8*dt; st.tw += dt; if(st.y>H) {st.y=0; st.x=Math.random()*W;} }
+    state.bullets.forEach(b => {
+      if(b.type.includes('vaccine')){
+        const target=nearestTumor(b.x,b.y);
+        if(target){ const want=Math.atan2(target.y-b.y,target.x-b.x); let da=((want-b.a+Math.PI*3)%TAU)-Math.PI; b.a += clamp(da,-2.7*dt,2.7*dt); const sp=Math.hypot(b.vx,b.vy); b.vx=Math.cos(b.a)*sp; b.vy=Math.sin(b.a)*sp; }
+      }
+      b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt*1000; wrap(b,8);
+    });
+    state.bullets=state.bullets.filter(b=>b.life>0);
+    state.enemyBullets.forEach(b => { b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt*1000; });
+    state.enemyBullets=state.enemyBullets.filter(b=>b.life>0 && b.x>-80 && b.x<W+80 && b.y>-80 && b.y<H+80);
+    state.tumors.slice().forEach(t=>t.update(dt));
+    state.enemies.slice().forEach(e=>e.update(dt));
+    state.powerups.forEach(p=>{p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt*1000; p.pulse+=dt*5; wrap(p,30);});
+    state.powerups=state.powerups.filter(p=>p.life>0);
+    state.particles.forEach(p=>{p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=Math.pow(.965,dt*60); p.vy*=Math.pow(.965,dt*60); p.life-=dt;});
+    state.particles=state.particles.filter(p=>p.life>0);
+    state.floaters.forEach(f=>{f.y+=f.vy*dt; f.life-=dt*1000;}); state.floaters=state.floaters.filter(f=>f.life>0);
+    state.shake=Math.max(0,state.shake-dt*36);
+
+    for(const b of state.bullets.slice()){
+      for(const t of state.tumors.slice()){
+        if(dist2(b,t) < (b.r+t.r)*(b.r+t.r)){ t.hit(b); if(b.pierce>0) b.pierce--; else removeFrom(state.bullets,b); break; }
+      }
+      for(const e of state.enemies.slice()){
+        if(state.bullets.includes(b) && dist2(b,e) < (b.r+e.r)*(b.r+e.r)){ e.hit(b); if(b.pierce>0) b.pierce--; else removeFrom(state.bullets,b); }
+      }
+    }
+    for(const t of state.tumors){ if(dist2(s,t) < (s.r+t.r*.85)*(s.r+t.r*.85)) playerHit(); }
+    for(const e of state.enemies){ if(dist2(s,e) < (s.r+e.r)*(s.r+e.r)) playerHit(); }
+    for(const b of state.enemyBullets.slice()){ if(dist2(s,b) < (s.r+b.r)*(s.r+b.r)){ removeFrom(state.enemyBullets,b); playerHit(); } }
+    for(const p of state.powerups.slice()){ if(dist2(s,p) < (s.r+p.r+5)*(s.r+p.r+5)){ removeFrom(state.powerups,p); applyPower(p.type); addFloater(powerName(p.type),p.x,p.y,FH.gold); } }
+  }
+
+  function drawBackground(){
+    const t=now()/1000;
+    const bg=ctx.createRadialGradient(W*.5+Math.sin(t*.11)*W*.2,H*.45+Math.cos(t*.09)*H*.2,0,W*.5,H*.5,Math.max(W,H)*.75);
+    bg.addColorStop(0,'#122a58'); bg.addColorStop(.45,'#08162f'); bg.addColorStop(1,'#02040b');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    ctx.save(); ctx.globalAlpha=.13;
+    for(let i=0;i<4;i++){
+      const x=W*(.18+i*.24)+Math.sin(t*.13+i)*40, y=H*(.18+((i*73)%100)/130)+Math.cos(t*.1+i)*35;
+      const g=ctx.createRadialGradient(x,y,0,x,y,260+i*50); g.addColorStop(0, i%2?FH.violet:FH.cyan); g.addColorStop(1,'transparent');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,300+i*40,0,TAU); ctx.fill();
+    }
+    ctx.restore();
+    for(const s of state.stars){
+      const a=.38+s.z*.4+Math.sin(s.tw*2+s.x)*.15; ctx.globalAlpha=clamp(a,0,1);
+      ctx.fillStyle=s.z>1?'#fff':'#bfefff'; ctx.fillRect(s.x,s.y,s.r*s.z,s.r*s.z);
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function drawBullet(b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.a);
+    ctx.shadowBlur=12; ctx.shadowColor=b.type.includes('vaccine')?FH.gold:FH.green;
+    ctx.fillStyle=b.type.includes('vaccine')?FH.gold:FH.green;
+    ctx.beginPath(); ctx.ellipse(0,0,b.type.includes('vaccine')?8:6,b.type.includes('vaccine')?3.5:2.5,0,0,TAU); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=1; ctx.stroke(); ctx.restore(); ctx.shadowBlur=0;
+  }
+
+  function drawEnemyBullet(b){
+    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.a); ctx.shadowBlur=14; ctx.shadowColor=FH.red; ctx.fillStyle=FH.red;
+    ctx.beginPath(); ctx.moveTo(10,0); ctx.lineTo(-6,-5); ctx.lineTo(-2,0); ctx.lineTo(-6,5); ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+
+  function drawPowerup(p){
+    const colors={rapid:FH.gold, shield:FH.green, triple:FH.cyan, thrust:'#ffffff', vaccine:FH.violet, life:FH.red}; const c=colors[p.type]||'#fff';
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.pulse*.3); ctx.globalAlpha=clamp(p.life/900,0,1);
+    ctx.shadowBlur=22; ctx.shadowColor=c; ctx.strokeStyle=c; ctx.lineWidth=2; ctx.fillStyle='rgba(8,18,36,.86)';
+    ctx.beginPath(); ctx.roundRect(-17,-17,34,34,8); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=c; ctx.font='bold 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    const icon={rapid:'⚡', shield:'◌', triple:'≋', thrust:'▲', vaccine:'m', life:'+'}[p.type]||'?'; ctx.fillText(icon,0,1);
+    ctx.restore();
+  }
+
+  function drawHUD(){
+    ctx.save();
+    ctx.font='700 16px system-ui'; ctx.textAlign='left'; ctx.fillStyle='rgba(234,247,255,.96)';
+    const panelW=Math.min(380,W-24);
+    glass(12,12,panelW,98);
+    ctx.fillStyle='#fff'; ctx.font='900 20px system-ui'; ctx.fillText('Fred Hutch Asteroids',28,40);
+    ctx.fillStyle='#b9d8e6'; ctx.font='700 14px system-ui'; ctx.fillText(`Score ${state.score.toLocaleString()}   High ${state.high.toLocaleString()}   Wave ${state.wave}`,28,64);
+    ctx.fillText(`Lives ${'♥'.repeat(Math.max(0,state.lives))}`,28,86);
+    const s=state.ship; let x=panelW-160, y=30;
+    drawTimers(s.power, x, y);
+    if(state.combo>1 && state.comboUntil>0){
+      glass(W-168, 12, 150, 42); ctx.fillStyle=FH.gold; ctx.font='900 18px system-ui'; ctx.textAlign='center'; ctx.fillText(`${state.combo}x Discovery Combo`, W-93,39);
+    }
+    if(state.message && now()<state.messageUntil){
+      const msg=state.message; ctx.font='700 14px system-ui'; const mw=Math.min(W-40, ctx.measureText(msg).width+36); glass((W-mw)/2,H-86,mw,54); ctx.fillStyle='#eaf7ff'; ctx.textAlign='center'; wrapText(msg,W/2,H-54,mw-30,18);
+    }
+    ctx.restore();
+  }
+
+  function drawTimers(power,x,y){
+    const entries=Object.entries(power).filter(([,v])=>v>0);
+    ctx.textAlign='left'; ctx.font='700 12px system-ui';
+    entries.slice(0,5).forEach(([k,v],i)=>{
+      const pct=clamp(v/12000,0,1), yy=y+i*16; ctx.fillStyle='rgba(255,255,255,.14)'; ctx.fillRect(x,yy,92,7); ctx.fillStyle= k==='shield'?FH.green:k==='vaccine'?FH.violet:k==='rapid'?FH.gold:k==='triple'?FH.cyan:'#fff'; ctx.fillRect(x,yy,92*pct,7); ctx.fillStyle='#dbefff'; ctx.fillText(k,x+98,yy+7);
+    });
+  }
+
+  function glass(x,y,w,h){
+    ctx.save(); ctx.fillStyle='rgba(6,15,31,.58)'; ctx.strokeStyle='rgba(125,235,255,.2)'; ctx.lineWidth=1; ctx.beginPath(); ctx.roundRect(x,y,w,h,18); ctx.fill(); ctx.stroke(); ctx.restore();
+  }
+
+  function wrapText(text,x,y,maxWidth,lineHeight){
+    const words=text.split(' '); let line='', yy=y;
+    for(const word of words){
+      const test=line+word+' '; if(ctx.measureText(test).width>maxWidth && line){ ctx.fillText(line.trim(),x,yy); line=word+' '; yy+=lineHeight; } else line=test;
+    }
+    ctx.fillText(line.trim(),x,yy);
+  }
+
+  function render(){
+    drawBackground();
+    if(state.shake>0){ ctx.save(); ctx.translate(rand(-state.shake,state.shake),rand(-state.shake,state.shake)); }
+    state.powerups.forEach(drawPowerup);
+    state.bullets.forEach(drawBullet);
+    state.enemyBullets.forEach(drawEnemyBullet);
+    state.tumors.forEach(t=>t.draw());
+    state.enemies.forEach(e=>e.draw());
+    if(state.ship) state.ship.draw();
+    for(const p of state.particles){ ctx.globalAlpha=clamp(p.life/p.max,0,1); ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*clamp(p.life/p.max,.2,1),0,TAU); ctx.fill(); }
+    ctx.globalAlpha=1;
+    for(const f of state.floaters){ ctx.globalAlpha=clamp(f.life/500,0,1); ctx.fillStyle=f.color; ctx.font='bold 15px system-ui'; ctx.textAlign='center'; ctx.fillText(f.text,f.x,f.y); }
+    ctx.globalAlpha=1;
+    if(state.shake>0) ctx.restore();
+    if(state.mode==='playing' || state.mode==='paused') drawHUD();
+    if(state.mode==='menu') drawAttract();
+  }
+
+  function drawAttract(){
+    const t=now()/1000;
+    ctx.save(); ctx.globalAlpha=.75;
+    ctx.translate(W*.5,H*.58); ctx.rotate(Math.sin(t*.7)*.08);
+    ctx.strokeStyle=FH.cyan; ctx.lineWidth=2; ctx.shadowBlur=22; ctx.shadowColor=FH.cyan;
+    ctx.beginPath(); ctx.moveTo(70,0); ctx.lineTo(-55,-38); ctx.lineTo(-28,0); ctx.lineTo(-55,38); ctx.closePath(); ctx.stroke();
+    ctx.fillStyle='rgba(0,171,200,.12)'; ctx.fill(); ctx.restore();
+  }
+
+  function loop(t){
+    const dt=(t-state.last)/1000; state.last=t; update(dt); render(); requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  if(!CanvasRenderingContext2D.prototype.roundRect){
+    CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+      r=Math.min(r,w/2,h/2); this.moveTo(x+r,y); this.arcTo(x+w,y,x+w,y+h,r); this.arcTo(x+w,y+h,x,y+h,r); this.arcTo(x,y+h,x,y,r); this.arcTo(x,y,x+w,y,r); return this;
+    };
+  }
+})();
+</script>
+</body>
+</html>
