@@ -54,7 +54,7 @@
       <button id="howBtn" class="secondary">Controls</button>
     </div>
     <div id="how" class="keys hidden">
-      <span class="pill">W / ↑</span> thrust, <span class="pill">A/D</span> or <span class="pill">←/→</span> rotate, <span class="pill">Space</span> fire, <span class="pill">Shift</span> boost, <span class="pill">P</span> radiation pulse ☢, <span class="pill">Esc</span> pause, <span class="pill">M</span> mute. Touch controls appear on small screens.
+      <span class="pill">W / ↑</span> thrust, <span class="pill">A/D</span> or <span class="pill">←/→</span> rotate, <span class="pill">Space</span> fire, <span class="pill">Shift</span> boost, <span class="pill">S / ↓</span> hold to shield, <span class="pill">P</span> radiation pulse ☢, <span class="pill">Esc</span> pause, <span class="pill">M</span> mute. Touch controls appear on small screens.
     </div>
   </div>
   <div id="gameOver" class="card hidden">
@@ -74,6 +74,7 @@
   </div>
   <div class="touchCluster">
     <div class="touchBtn" data-touch="pulse">☢</div>
+    <div class="touchBtn" data-touch="shield">◎</div>
     <div class="touchBtn" data-touch="boost">✦</div>
     <div class="touchBtn" data-touch="fire">●</div>
   </div>
@@ -113,7 +114,7 @@
   addEventListener('resize', resize, {passive:true}); resize();
 
   const keys = new Set();
-  const touch = {left:false,right:false,thrust:false,fire:false,boost:false};
+  const touch = {left:false,right:false,thrust:false,fire:false,boost:false,shield:false};
   addEventListener('keydown', e => {
     if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
     keys.add(e.code);
@@ -218,13 +219,15 @@
       this.x=W/2; this.y=H/2; this.vx=0; this.vy=0; this.a=-Math.PI/2; this.r=18;
       this.cool=0; this.invuln=2200; this.trail=[]; this.boostHeat=0;
       this.power={rapid:0, shield:0, triple:0, thrust:0, vaccine:0};
-      this.pulseCharges=2;
+      this.pulseCharges=2; this.shielding=false;
     }
     update(dt){
       const left = keys.has('ArrowLeft') || keys.has('KeyA') || touch.left;
       const right = keys.has('ArrowRight') || keys.has('KeyD') || touch.right;
       const thrusting = keys.has('ArrowUp') || keys.has('KeyW') || touch.thrust;
       const boosting = keys.has('ShiftLeft') || keys.has('ShiftRight') || touch.boost;
+      const shielding = (keys.has('KeyS') || keys.has('ArrowDown') || touch.shield) && this.power.shield > 0;
+      this.shielding = shielding;
       const turn = 4.35 * dt;
       if(left) this.a -= turn; if(right) this.a += turn;
       const boost = boosting ? 1.75 : 1;
@@ -240,7 +243,8 @@
       this.vx *= Math.pow(.985, dt*60); this.vy *= Math.pow(.985, dt*60);
       this.x += this.vx*dt; this.y += this.vy*dt; wrap(this, 25);
       this.cool -= dt*1000; this.invuln -= dt*1000;
-      for(const k in this.power) this.power[k]=Math.max(0,this.power[k]-dt*1000);
+      for(const k in this.power) if(k!=='shield') this.power[k]=Math.max(0,this.power[k]-dt*1000);
+      if(shielding) this.power.shield=Math.max(0,this.power.shield-dt*1000);
       this.trail.forEach(t=>t.life-=dt*2.3); this.trail=this.trail.filter(t=>t.life>0);
       if((keys.has('Space') || touch.fire) && this.cool<=0) this.fire();
     }
@@ -274,11 +278,15 @@
       ctx.fillStyle=FH.gold; ctx.beginPath(); ctx.moveTo(4,-6); ctx.lineTo(15,0); ctx.lineTo(4,6); ctx.closePath(); ctx.fill();
       ctx.rotate(-this.a); ctx.fillStyle='rgba(255,255,255,.9)'; ctx.font='bold 9px system-ui'; ctx.textAlign='center'; ctx.fillText('FH',0,3);
       ctx.restore(); ctx.globalAlpha=1;
-      if(this.power.shield>0 || this.invuln>0){
-        const alpha = this.power.shield>0 ? .72 : .35;
-        ctx.save(); ctx.globalAlpha=alpha; ctx.strokeStyle=this.power.shield>0?FH.green:FH.cyan; ctx.lineWidth=2;
-        ctx.shadowBlur=18; ctx.shadowColor=this.power.shield>0?FH.green:FH.cyan;
+      if(this.shielding || this.invuln>0){
+        const alpha = this.shielding ? .72 : .35;
+        ctx.save(); ctx.globalAlpha=alpha; ctx.strokeStyle=this.shielding?FH.green:FH.cyan; ctx.lineWidth=2;
+        ctx.shadowBlur=18; ctx.shadowColor=this.shielding?FH.green:FH.cyan;
         ctx.beginPath(); ctx.arc(this.x,this.y,31 + Math.sin(now()/120)*2,0,TAU); ctx.stroke(); ctx.restore();
+      } else if(this.power.shield>0){
+        ctx.save(); ctx.globalAlpha=0.18; ctx.strokeStyle=FH.green; ctx.lineWidth=1.5;
+        ctx.setLineDash([4,6]); ctx.beginPath(); ctx.arc(this.x,this.y,31,0,TAU); ctx.stroke();
+        ctx.setLineDash([]); ctx.restore();
       }
     }
   }
@@ -414,7 +422,7 @@
     const s=state.ship;
     if(type==='life'){ state.lives++; audio.life(); toast('Extra life: another patient-centered chance.', 2600); }
     if(type==='rapid'){ s.power.rapid=10500; toast('Rapid-fire assay active: faster T-cell shots.', 2600); audio.power(); }
-    if(type==='shield'){ s.power.shield=9000; toast('Shield active: absorb one or more hits while it lasts.', 2600); audio.power(); }
+    if(type==='shield'){ s.power.shield=9000; toast('Protective shield stored. Hold S or \u2193 to activate the field.', 2600); audio.power(); }
     if(type==='triple'){ s.power.triple=11500; toast('Triple-shot protocol active.', 2600); audio.power(); }
     if(type==='thrust'){ s.power.thrust=10000; toast('Thruster grant awarded: high-mobility research sprint.', 2600); audio.power(); }
     if(type==='vaccine'){ s.power.vaccine=12000; toast('mRNA-guided volley active: shots gently home toward tumors.', 3100); audio.power(); }
@@ -481,7 +489,7 @@
 
   function playerHit(){
     const s=state.ship; if(!s || s.invuln>0) return;
-    if(s.power.shield>0){ s.power.shield=Math.max(0,s.power.shield-4200); burst(s.x,s.y,FH.green,34,2.6); toast('Shield absorbed the hit.', 1600); audio.power(); return; }
+    if(s.shielding){ s.power.shield=Math.max(0,s.power.shield-4200); burst(s.x,s.y,FH.green,34,2.6); toast('Shield absorbed the hit.', 1600); audio.power(); return; }
     state.lives--; s.invuln=2500; s.x=W/2; s.y=H/2; s.vx=0; s.vy=0; state.shake=18; audio.playerHit(); burst(s.x,s.y,FH.cyan,60,4);
     toast(state.lives>0 ? 'Discovery craft repaired. Re-entering the field.' : 'Mission complete. The work continues.', 3200);
     if(state.lives<=0) endGame();
