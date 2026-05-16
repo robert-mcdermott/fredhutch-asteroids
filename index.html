@@ -410,7 +410,7 @@
 
   function spawnPowerup(x,y,force=false){
     const types=['rapid','shield','triple','thrust','vaccine','life','radpulse'];
-    const type = force ? pick(types) : pick(['rapid','rapid','shield','triple','thrust','vaccine','life','radpulse']);
+    const type = pick(types);
     state.powerups.push({x,y,type,vx:rand(-60,60),vy:rand(-60,60),r:17,life:10000,pulse:rand(0,TAU)});
   }
 
@@ -603,25 +603,30 @@
     const panelW=Math.min(380,W-24);
     glass(12,12,panelW,98);
     ctx.fillStyle='#fff'; ctx.font='900 20px system-ui'; ctx.fillText('Fred Hutch Asteroids',28,40);
-    const s=state.ship; let x=panelW-160, y=30;
+    const s=state.ship;
     ctx.fillStyle='#b9d8e6'; ctx.font='700 14px system-ui'; ctx.fillText(`Score ${state.score.toLocaleString()}   High ${state.high.toLocaleString()}   Wave ${state.wave}`,28,64);
     ctx.fillText(`Lives ${'♥'.repeat(Math.max(0,state.lives))}  \u2622 ${s ? s.pulseCharges : 0}`,28,86);
-    drawTimers(s.power, x, y);
-    if(state.combo>1 && state.comboUntil>0){
-      glass(W-168, 12, 150, 42); ctx.fillStyle=FH.gold; ctx.font='900 18px system-ui'; ctx.textAlign='center'; ctx.fillText(`${state.combo}x Discovery Combo`, W-93,39);
+    // Active power timers — separate upper-right panel
+    const pwrEntries=Object.entries(s.power).filter(([,v])=>v>0);
+    let rY=12;
+    if(pwrEntries.length>0 && W-panelW>210){
+      const ph=18+pwrEntries.length*17, pw=188, px=W-pw-12;
+      glass(px,12,pw,ph); ctx.textAlign='left'; ctx.font='700 12px system-ui';
+      pwrEntries.slice(0,5).forEach(([k,v],i)=>{
+        const pct=clamp(v/12000,0,1), yy=28+i*17;
+        ctx.fillStyle='rgba(255,255,255,.14)'; ctx.fillRect(px+10,yy,92,7);
+        ctx.fillStyle=k==='shield'?FH.green:k==='vaccine'?FH.violet:k==='rapid'?FH.gold:k==='triple'?FH.cyan:'#fff';
+        ctx.fillRect(px+10,yy,92*pct,7); ctx.fillStyle='#dbefff'; ctx.fillText(k,px+108,yy+7);
+      });
+      rY=12+ph+8;
+    }
+    if(state.combo>1&&state.comboUntil>0){
+      glass(W-168,rY,150,42); ctx.fillStyle=FH.gold; ctx.font='900 18px system-ui'; ctx.textAlign='center'; ctx.fillText(`${state.combo}x Discovery Combo`,W-93,rY+27);
     }
     if(state.message && now()<state.messageUntil){
       const msg=state.message; ctx.font='700 14px system-ui'; const mw=Math.min(W-40, ctx.measureText(msg).width+36); glass((W-mw)/2,H-86,mw,54); ctx.fillStyle='#eaf7ff'; ctx.textAlign='center'; wrapText(msg,W/2,H-54,mw-30,18);
     }
     ctx.restore();
-  }
-
-  function drawTimers(power,x,y){
-    const entries=Object.entries(power).filter(([,v])=>v>0);
-    ctx.textAlign='left'; ctx.font='700 12px system-ui';
-    entries.slice(0,5).forEach(([k,v],i)=>{
-      const pct=clamp(v/12000,0,1), yy=y+i*16; ctx.fillStyle='rgba(255,255,255,.14)'; ctx.fillRect(x,yy,92,7); ctx.fillStyle= k==='shield'?FH.green:k==='vaccine'?FH.violet:k==='rapid'?FH.gold:k==='triple'?FH.cyan:'#fff'; ctx.fillRect(x,yy,92*pct,7); ctx.fillStyle='#dbefff'; ctx.fillText(k,x+98,yy+7);
-    });
   }
 
   function glass(x,y,w,h){
