@@ -1,5 +1,7 @@
 # Fred Hutch Asteroids
 
+![game](game.png)
+
 Fred Hutch Asteroids is a browser-based arcade game inspired by the classic
 asteroids formula and reimagined as a cancer research mission.
 
