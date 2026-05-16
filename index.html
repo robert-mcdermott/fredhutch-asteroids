@@ -18,51 +18,79 @@
   html, body { margin:0; height:100%; overflow:hidden; background:#030712; color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   canvas { display:block; width:100vw; height:100vh; background: radial-gradient(circle at 50% 50%, #112046 0%, #07111f 55%, #02040b 100%); }
   #overlay { position:fixed; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; }
-  .card { pointer-events:auto; width:min(880px, calc(100vw - 36px)); padding:28px; border:1px solid rgba(109,221,255,.28); border-radius:28px; background:linear-gradient(135deg, rgba(9,19,38,.86), rgba(21,11,43,.82)); box-shadow:0 0 40px rgba(0,171,200,.22), inset 0 0 60px rgba(255,255,255,.03); backdrop-filter: blur(12px); }
+  .card { pointer-events:auto; width:min(880px, calc(100vw - 36px)); padding:28px; border:1px solid rgba(109,221,255,.28); border-radius:8px; background:linear-gradient(135deg, rgba(9,19,38,.86), rgba(21,11,43,.82)); box-shadow:0 0 40px rgba(0,171,200,.22), inset 0 0 60px rgba(255,255,255,.03); backdrop-filter: blur(12px); }
   .hidden { display:none !important; }
-  h1 { margin:0 0 8px; font-size: clamp(36px, 7vw, 82px); letter-spacing:-.06em; line-height:.9; }
+  .brandStrip { display:flex; align-items:center; gap:12px; margin-bottom:18px; color:#dceef8; }
+  .brandMark { width:42px; height:42px; object-fit:contain; opacity:.68; border-radius:6px; filter:drop-shadow(0 0 14px rgba(0,171,200,.22)); }
+  .brandStrip strong { display:block; color:#fff; font-size:15px; line-height:1.2; }
+  .brandStrip small { display:block; color:#9ec2d6; font-size:12px; line-height:1.4; }
+  h1 { margin:0 0 8px; font-size: clamp(36px, 7vw, 82px); letter-spacing:0; line-height:.9; }
   h1 span { color:var(--fh-cyan); text-shadow:0 0 28px rgba(0,171,200,.7); }
   .subtitle { color:#b8d7e6; font-size: clamp(15px, 2.2vw, 20px); margin:0 0 22px; max-width:780px; }
   .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; margin:20px 0; }
-  .mini { border:1px solid rgba(255,255,255,.13); border-radius:18px; padding:14px 15px; background:rgba(255,255,255,.055); min-height:78px; }
+  .mini { border:1px solid rgba(255,255,255,.13); border-radius:8px; padding:14px 15px; background:rgba(255,255,255,.055); min-height:78px; }
   .mini strong { display:block; color:#fff; margin-bottom:6px; }
   .mini small { color:#b8cce0; line-height:1.35; }
-  button { border:0; color:#03101a; background:linear-gradient(135deg, var(--fh-cyan), #7df3ff); font-weight:800; border-radius:999px; padding:14px 22px; font-size:16px; box-shadow:0 10px 30px rgba(0,171,200,.28); cursor:pointer; }
+  button { border:0; color:#03101a; background:linear-gradient(135deg, var(--fh-cyan), #7df3ff); font-weight:800; border-radius:8px; padding:14px 22px; font-size:16px; box-shadow:0 10px 30px rgba(0,171,200,.28); cursor:pointer; }
   button.secondary { color:#eaf7ff; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); box-shadow:none; }
   .row { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
   .keys { color:#c5d5e3; margin-top:15px; font-size:14px; line-height:1.55; }
-  .pill { display:inline-block; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); border-radius:999px; padding:2px 8px; margin:0 2px; color:#fff; font-weight:700; }
+  .pill { display:inline-block; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); border-radius:6px; padding:2px 8px; margin:0 2px; color:#fff; font-weight:700; }
+  .donateLink { color:#9ff4ff; font-weight:800; text-decoration:none; border-bottom:1px solid rgba(159,244,255,.55); }
+  .donateLink:hover, .donateLink:focus { color:#fff; border-bottom-color:#fff; outline:none; }
   #touchControls { position:fixed; inset:auto 0 16px 0; display:none; justify-content:space-between; padding:0 18px; pointer-events:none; }
   .touchCluster { display:flex; gap:10px; pointer-events:auto; }
-  .touchBtn { width:64px; height:64px; border-radius:22px; border:1px solid rgba(255,255,255,.16); background:rgba(9,18,33,.48); color:white; display:grid; place-items:center; font-weight:900; font-size:20px; backdrop-filter:blur(8px); user-select:none; }
-  @media (max-width:700px){ .grid{grid-template-columns:1fr;} .card{padding:21px;} #touchControls{display:flex;} }
+  .touchBtn { width:64px; height:64px; border-radius:8px; border:1px solid rgba(255,255,255,.16); background:rgba(9,18,33,.48); color:white; display:grid; place-items:center; font-weight:900; font-size:20px; backdrop-filter:blur(8px); user-select:none; }
+  @media (max-width:700px){
+    .grid{grid-template-columns:1fr;}
+    .card{padding:21px;}
+    #touchControls{display:flex; align-items:flex-end;}
+    .touchBtn{width:48px; height:48px; font-size:17px;}
+    .actionCluster{display:grid; grid-template-columns:repeat(3,48px); gap:8px;}
+  }
+  @media (max-width:420px){
+    #touchControls{padding:0 10px;}
+    .touchCluster{gap:6px;}
+    .touchBtn{width:42px; height:42px; font-size:15px;}
+    .actionCluster{grid-template-columns:repeat(3,42px); gap:6px;}
+  }
 </style>
 </head>
 <body>
 <canvas id="game" aria-label="Fred Hutch Asteroids arcade game"></canvas>
 <div id="overlay">
   <div id="menu" class="card">
+    <div class="brandStrip">
+      <img class="brandMark" src="logo.png" alt="Fred Hutch Cancer Center mark">
+      <div><strong>Fred Hutch Cancer Center</strong><small>Discovery, prevention, treatment</small></div>
+    </div>
     <h1>Fred Hutch <span>Asteroids</span></h1>
-    <p class="subtitle">Pilot the mighty Fred Hutch discovery craft through a microscopic battlefield of rogue tumors, hostile oncoviruses, and suspiciously aggressive cell clusters. Fire T-cells, vaccines, radiation bursts, and other science-powered payloads as you break big tumors into smaller problems, collect research-grade powerups, and prove once again that teamwork, technology, and a well-aimed blast of immunotherapy can save the day.</p>
+    <p class="subtitle">Pilot the Fred Hutch discovery craft through a microscopic battlefield of rogue tumors, hostile oncoviruses, and fast-dividing cell clusters. Protect your R01 grants, deploy T-cells, mRNA vaccines, radiation pulses, and chemo infusions, and turn research momentum into patient impact.</p>
     <div class="grid">
-      <div class="mini"><strong>Therapy Arsenal</strong><small>Killer T-cells, mRNA guidance, radiation pulses, chemo bursts, and vaccine volleys.</small></div>
-      <div class="mini"><strong>Research Powerups</strong><small>Rapid fire, shield, triple shot, thruster boost, extra life, and homing vaccine mode.</small></div>
-      <div class="mini"><strong>Arcade Learning</strong><small>Short science notes appear as you clear waves, without turning the game into homework.</small></div>
+      <div class="mini"><strong>Therapy Arsenal</strong><small>Killer T-cells, mRNA-guided vaccines, radiation pulses, and timed chemo infusions.</small></div>
+      <div class="mini"><strong>Research Funding</strong><small>R01 grants are your mission meter. Bridge grants and donor-powered discoveries keep the work alive.</small></div>
+      <div class="mini"><strong>Translational Science</strong><small>Short notes connect prevention, trials, precision oncology, immunotherapy, and supportive care.</small></div>
     </div>
     <div class="row">
       <button id="startBtn">Start mission</button>
       <button id="howBtn" class="secondary">Controls</button>
+      <a class="donateLink" href="https://www.fredhutch.org/en/ways-to-give.html" target="_blank" rel="noopener noreferrer">Support Fred Hutch</a>
     </div>
     <div id="how" class="keys hidden">
-      <span class="pill">W / ↑</span> thrust, <span class="pill">A/D</span> or <span class="pill">←/→</span> rotate, <span class="pill">Space</span> fire, <span class="pill">Shift</span> boost, <span class="pill">S / ↓</span> hold to shield, <span class="pill">P</span> radiation pulse ☢, <span class="pill">Esc</span> pause, <span class="pill">M</span> mute. Touch controls appear on small screens.
+      <span class="pill">W / ↑</span> thrust, <span class="pill">A/D</span> or <span class="pill">←/→</span> rotate, <span class="pill">Space</span> fire, <span class="pill">Shift</span> boost, <span class="pill">S / ↓</span> hold to shield, <span class="pill">C</span> chemo infusion, <span class="pill">P</span> radiation pulse, <span class="pill">Esc</span> pause, <span class="pill">M</span> mute. Touch controls appear on small screens.
     </div>
   </div>
   <div id="gameOver" class="card hidden">
+    <div class="brandStrip">
+      <img class="brandMark" src="logo.png" alt="Fred Hutch Cancer Center mark">
+      <div><strong>Fred Hutch Cancer Center</strong><small>The work continues after every run</small></div>
+    </div>
     <h1>Mission <span>Report</span></h1>
     <p id="finalText" class="subtitle"></p>
     <div class="row">
       <button id="restartBtn">Launch again</button>
       <button id="menuBtn" class="secondary">Back to title</button>
+      <a class="donateLink" href="https://www.fredhutch.org/en/ways-to-give.html" target="_blank" rel="noopener noreferrer">Donate to Fred Hutch</a>
     </div>
   </div>
 </div>
@@ -72,8 +100,9 @@
     <div class="touchBtn" data-touch="thrust">▲</div>
     <div class="touchBtn" data-touch="right">▶</div>
   </div>
-  <div class="touchCluster">
+  <div class="touchCluster actionCluster">
     <div class="touchBtn" data-touch="pulse">☢</div>
+    <div class="touchBtn" data-touch="chemo">C</div>
     <div class="touchBtn" data-touch="shield">◎</div>
     <div class="touchBtn" data-touch="boost">✦</div>
     <div class="touchBtn" data-touch="fire">●</div>
@@ -97,6 +126,8 @@
 
   const TAU = Math.PI * 2;
   const FH = { navy:'#1B365D', cyan:'#00ABC8', gold:'#FFB500', violet:'#AA4AC4', green:'#58ffb4', red:'#ff477e' };
+  const brandMark = new Image();
+  brandMark.src = 'logo.png';
   const rand = (a,b) => a + Math.random() * (b-a);
   const pick = arr => arr[Math.floor(Math.random()*arr.length)];
   const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
@@ -121,12 +152,17 @@
     if(e.code === 'Escape') togglePause();
     if(e.code === 'KeyM') audio.toggleMute();
     if(e.code === 'KeyP' && state.mode==='playing' && state.ship) activateRadiationPulse();
+    if(e.code === 'KeyC' && state.mode==='playing' && state.ship) activateChemoInfusion();
   });
   addEventListener('keyup', e => keys.delete(e.code));
   document.querySelectorAll('[data-touch]').forEach(el => {
     const k = el.dataset.touch;
     if(k === 'pulse'){
       el.addEventListener('pointerdown', e => { e.preventDefault(); audio.ensure(); if(state.mode==='playing' && state.ship) activateRadiationPulse(); });
+      return;
+    }
+    if(k === 'chemo'){
+      el.addEventListener('pointerdown', e => { e.preventDefault(); audio.ensure(); if(state.mode==='playing' && state.ship) activateChemoInfusion(); });
       return;
     }
     const on = e => { e.preventDefault(); touch[k] = true; audio.ensure(); };
@@ -172,7 +208,8 @@
     life(){ this.beep(523,.09,'sine',.18,0); setTimeout(()=>this.beep(659,.09,'sine',.18,0),85); setTimeout(()=>this.beep(784,.12,'sine',.18,0),170); },
     virus(){ this.beep(110,.25,'square',.12,80); },
     playerHit(){ this.noise(.32,.35,900); this.beep(80,.35,'sawtooth',.2,-40); },
-    radPulse(){ this.beep(80,.15,'sine',.32,-20); setTimeout(()=>this.beep(160,.22,'sine',.22,-90),50); this.noise(.28,.2,380); }
+    radPulse(){ this.beep(80,.15,'sine',.32,-20); setTimeout(()=>this.beep(160,.22,'sine',.22,-90),50); this.noise(.28,.2,380); },
+    chemo(){ this.beep(310,.12,'triangle',.2,120); setTimeout(()=>this.beep(245,.2,'sine',.16,-40),65); this.noise(.2,.12,680); }
   };
 
   const tumorCatalog = [
@@ -192,12 +229,14 @@
     'Chemotherapy can attack fast-dividing cells and is often combined with other treatments.',
     'Clinical trials help turn scientific discoveries into safer, better treatments.',
     'Precision oncology matches treatment strategy to tumor biology when actionable information is available.',
-    'Supportive care matters too: treatment is about people, not just cells.'
+    'Supportive care matters too: treatment is about people, not just cells.',
+    'Prevention, early detection, survivorship, and equity are all part of cancer research.',
+    'NIH R01 grants help sustain investigator-led discovery; philanthropy can accelerate the next leap.'
   ];
 
   const state = {
-    mode:'menu', score:0, wave:1, lives:3, high: Number(localStorage.getItem('fhAsteroidsHigh') || 0),
-    bullets:[], tumors:[], particles:[], powerups:[], enemies:[], enemyBullets:[], stars:[], floaters:[], pulseRings:[],
+    mode:'menu', score:0, wave:1, grants:3, high: Number(localStorage.getItem('fhAsteroidsHigh') || 0),
+    bullets:[], tumors:[], particles:[], powerups:[], enemies:[], enemyBullets:[], stars:[], floaters:[], pulseRings:[], chemoClouds:[],
     ship:null, last:now(), nextVirus:12000, message:'', messageUntil:0, combo:0, comboUntil:0, shake:0, slowmo:0,
     stats:{tumors:0, viruses:0, discoveries:0}
   };
@@ -209,8 +248,15 @@
 
   function makeStars(){
     state.stars = [];
-    const n = Math.floor((W*H)/5600);
-    for(let i=0;i<n;i++) state.stars.push({x:Math.random()*W,y:Math.random()*H,z:rand(.2,1.4),tw:rand(0,TAU),r:rand(.4,1.6)});
+    const n = Math.floor((W*H)/7200);
+    const kinds = ['dna','dna','protein','nucleotide','marker','spark'];
+    for(let i=0;i<n;i++){
+      state.stars.push({
+        x:Math.random()*W, y:Math.random()*H, z:rand(.2,1.35), tw:rand(0,TAU),
+        r:rand(.55,1.4), kind:pick(kinds), rot:rand(0,TAU), spin:rand(-.18,.18),
+        color:pick(['#8cecff','#b790ff','#ffcf50','#8fffd0','#f7fbff'])
+      });
+    }
   }
   makeStars(); addEventListener('resize', makeStars, {passive:true});
 
@@ -219,7 +265,7 @@
       this.x=W/2; this.y=H/2; this.vx=0; this.vy=0; this.a=-Math.PI/2; this.r=18;
       this.cool=0; this.invuln=2200; this.trail=[]; this.boostHeat=0;
       this.power={rapid:0, shield:0, triple:0, thrust:0, vaccine:0};
-      this.pulseCharges=2; this.shielding=false;
+      this.pulseCharges=2; this.chemoCharges=2; this.shielding=false;
     }
     update(dt){
       const left = keys.has('ArrowLeft') || keys.has('KeyA') || touch.left;
@@ -303,9 +349,11 @@
     }
     update(dt){ this.x+=this.vx*dt; this.y+=this.vy*dt; this.a+=this.spin*dt; this.labelTimer-=dt*1000; wrap(this,this.r+8); }
     hit(b){
-      this.hp -= b.type==='radiation' ? 1.8 : b.type.includes('vaccine') ? 1.6 : 1;
+      const type = b.type || '';
+      this.hp -= type==='radiation' ? 1.8 : type==='chemo' ? 1.15 : type.includes('vaccine') ? 1.6 : 1;
       burst(this.x,this.y,this.kind.color,10+this.size*5,1.5+this.size*.7);
       audio.hit(); state.shake = Math.max(state.shake, 4 + this.size*2);
+      if(type==='chemo'){ this.vx*=.92; this.vy*=.92; }
       if(this.hp<=0) this.destroy();
     }
     destroy(){
@@ -383,7 +431,7 @@
       audio.beep(240,.08,'square',.13,-80);
     }
     hit(b){
-      this.hp--; burst(this.x,this.y,FH.violet,16,2); audio.hit();
+      this.hp -= b.type==='chemo' ? .8 : 1; burst(this.x,this.y,FH.violet,16,2); audio.hit();
       if(this.hp<=0){
         state.score += 750; state.stats.viruses++; addFloater('+750 virus contained', this.x,this.y,FH.violet); spawnPowerup(this.x,this.y,true); burst(this.x,this.y,FH.violet,50,4); removeFrom(state.enemies,this); toast('Virus contained. Immune surveillance bonus awarded.', 3200);
       }
@@ -409,24 +457,25 @@
   function removeFrom(arr,obj){ const i=arr.indexOf(obj); if(i>=0) arr.splice(i,1); }
 
   function spawnPowerup(x,y,force=false){
-    const types=['rapid','shield','triple','thrust','vaccine','life','radpulse'];
+    const types=force ? ['vaccine','radpulse','chemo','grant'] : ['rapid','shield','triple','thrust','vaccine','grant','radpulse','chemo'];
     const type = pick(types);
     state.powerups.push({x,y,type,vx:rand(-60,60),vy:rand(-60,60),r:17,life:10000,pulse:rand(0,TAU)});
   }
 
   function powerName(type){
-    return ({rapid:'Rapid-fire assay', shield:'Protective shield', triple:'Triple-shot protocol', thrust:'Thruster grant', vaccine:'mRNA-guided volley', life:'Extra life', radpulse:'Radiation pulse charge'}[type] || type);
+    return ({rapid:'Rapid-fire assay', shield:'Protective shield', triple:'Triple-shot protocol', thrust:'Thruster grant', vaccine:'mRNA-guided volley', grant:'R01 bridge grant', radpulse:'Radiation pulse charge', chemo:'Chemo infusion charge'}[type] || type);
   }
 
   function applyPower(type){
     const s=state.ship;
-    if(type==='life'){ state.lives++; audio.life(); toast('Extra life: another patient-centered chance.', 2600); }
+    if(type==='grant'){ state.grants++; audio.life(); toast('R01 bridge grant awarded: one more funded chance to keep discovery moving.', 3000); }
     if(type==='rapid'){ s.power.rapid=10500; toast('Rapid-fire assay active: faster T-cell shots.', 2600); audio.power(); }
     if(type==='shield'){ s.power.shield=9000; toast('Protective shield stored. Hold S or \u2193 to activate the field.', 2600); audio.power(); }
     if(type==='triple'){ s.power.triple=11500; toast('Triple-shot protocol active.', 2600); audio.power(); }
     if(type==='thrust'){ s.power.thrust=10000; toast('Thruster grant awarded: high-mobility research sprint.', 2600); audio.power(); }
     if(type==='vaccine'){ s.power.vaccine=12000; toast('mRNA-guided volley active: shots gently home toward tumors.', 3100); audio.power(); }
     if(type==='radpulse'){ s.pulseCharges=Math.min(5,s.pulseCharges+1); toast('Radiation pulse charge stored. Press P to release ionizing energy.', 2600); audio.power(); }
+    if(type==='chemo'){ s.chemoCharges=Math.min(5,s.chemoCharges+1); toast('Chemo infusion charge stored. Press C to deploy a cytotoxic field.', 2800); audio.power(); }
     state.stats.discoveries++;
   }
 
@@ -442,7 +491,7 @@
   function startGame(){
     audio.ensure();
     menu.classList.add('hidden'); gameOverPanel.classList.add('hidden'); overlay.style.display='none';
-    state.mode='playing'; state.score=0; state.wave=0; state.lives=3; state.bullets=[]; state.tumors=[]; state.powerups=[]; state.enemies=[]; state.enemyBullets=[]; state.particles=[]; state.floaters=[]; state.pulseRings=[]; state.combo=0; state.stats={tumors:0,viruses:0,discoveries:0};
+    state.mode='playing'; state.score=0; state.wave=0; state.grants=3; state.bullets=[]; state.tumors=[]; state.powerups=[]; state.enemies=[]; state.enemyBullets=[]; state.particles=[]; state.floaters=[]; state.pulseRings=[]; state.chemoClouds=[]; state.combo=0; state.stats={tumors:0,viruses:0,discoveries:0};
     state.ship=new Ship(); state.nextVirus=now()+16000; toast('Mission start: translate discovery into impact.', 3000); nextWave();
   }
 
@@ -465,7 +514,7 @@
 
   function resetMenuText(){
     menu.querySelector('h1').innerHTML='Fred Hutch <span>Asteroids</span>';
-    menu.querySelector('.subtitle').textContent='Pilot the Fred Hutch discovery craft through a living starfield. Break tumors into smaller targets, collect translational research boosts, and watch out for oncoviruses that fire back.';
+    menu.querySelector('.subtitle').textContent='Pilot the Fred Hutch discovery craft through a microscopic battlefield of rogue tumors, hostile oncoviruses, and fast-dividing cell clusters. Protect your R01 grants, deploy T-cells, mRNA vaccines, radiation pulses, and chemo infusions, and turn research momentum into patient impact.';
     startBtn.textContent='Start mission';
   }
 
@@ -487,18 +536,30 @@
     toast('Radiation pulse released: ionizing energy sweeps the field.', 2600);
   }
 
+  function activateChemoInfusion(){
+    const s=state.ship;
+    if(!s || s.chemoCharges<=0){ toast('No chemo infusions remaining. Collect C powerups to recharge.', 1800); return; }
+    s.chemoCharges--;
+    state.chemoClouds.push({x:s.x,y:s.y,vx:s.vx*.16,vy:s.vy*.16,r:24,maxR:205,life:2.55,max:2.55,hits:new Map(),phase:rand(0,TAU)});
+    audio.chemo();
+    burst(s.x, s.y, FH.green, 28, 1.6);
+    addFloater('Chemo Infusion', s.x, s.y-38, FH.green);
+    state.shake=Math.max(state.shake, 5);
+    toast('Chemo infusion deployed: cytotoxic therapy lingers near fast-dividing targets.', 3000);
+  }
+
   function playerHit(){
     const s=state.ship; if(!s || s.invuln>0) return;
     if(s.shielding){ s.power.shield=Math.max(0,s.power.shield-4200); burst(s.x,s.y,FH.green,34,2.6); toast('Shield absorbed the hit.', 1600); audio.power(); return; }
-    state.lives--; s.invuln=2500; s.x=W/2; s.y=H/2; s.vx=0; s.vy=0; state.shake=18; audio.playerHit(); burst(s.x,s.y,FH.cyan,60,4);
-    toast(state.lives>0 ? 'Discovery craft repaired. Re-entering the field.' : 'Mission complete. The work continues.', 3200);
-    if(state.lives<=0) endGame();
+    state.grants--; s.invuln=2500; s.x=W/2; s.y=H/2; s.vx=0; s.vy=0; state.shake=18; audio.playerHit(); burst(s.x,s.y,FH.cyan,60,4);
+    toast(state.grants>0 ? 'One R01 took a hit. Bridge the gap and re-enter the field.' : 'Grant portfolio exhausted. The work continues.', 3200);
+    if(state.grants<=0) endGame();
   }
 
   function endGame(){
     state.mode='over'; overlay.style.display='flex'; gameOverPanel.classList.remove('hidden'); menu.classList.add('hidden'); resetMenuText();
     if(state.score>state.high){ state.high=state.score; localStorage.setItem('fhAsteroidsHigh', String(state.high)); }
-    finalText.innerHTML = `Score: <b>${state.score.toLocaleString()}</b><br>Waves cleared: <b>${Math.max(0,state.wave-1)}</b><br>Tumor fragments neutralized: <b>${state.stats.tumors}</b><br>Viruses contained: <b>${state.stats.viruses}</b><br>Powerups translated into impact: <b>${state.stats.discoveries}</b><br>High score: <b>${state.high.toLocaleString()}</b>`;
+    finalText.innerHTML = `Score: <b>${state.score.toLocaleString()}</b><br>Waves cleared: <b>${Math.max(0,state.wave-1)}</b><br>Tumor fragments neutralized: <b>${state.stats.tumors}</b><br>Viruses contained: <b>${state.stats.viruses}</b><br>Research boosts translated into impact: <b>${state.stats.discoveries}</b><br>R01 grants remaining: <b>${Math.max(0,state.grants)}</b><br>High score: <b>${state.high.toLocaleString()}</b><br><a class="donateLink" href="https://www.fredhutch.org/en/ways-to-give.html" target="_blank" rel="noopener noreferrer">Fuel the next discovery at Fred Hutch</a>`;
   }
 
   function nearestTumor(x,y){
@@ -515,7 +576,13 @@
     if(now()>state.nextVirus){ state.enemies.push(new Virus()); state.nextVirus=now()+rand(22000,34000)-Math.min(state.wave*800,10000); }
     if(state.comboUntil>0){ state.comboUntil-=dt*1000; if(state.comboUntil<=0) state.combo=0; }
 
-    for(const st of state.stars){ st.y += st.z*8*dt; st.tw += dt; if(st.y>H) {st.y=0; st.x=Math.random()*W;} }
+    for(const st of state.stars){
+      st.y += st.z*(5+Math.sin(st.tw)*2)*dt;
+      st.x += Math.sin(st.tw*.7+st.y*.01)*st.z*3*dt;
+      st.tw += dt*(.35+st.z*.35); st.rot += st.spin*dt;
+      if(st.y>H+24) {st.y=-24; st.x=Math.random()*W;}
+      if(st.x<-24) st.x=W+24; if(st.x>W+24) st.x=-24;
+    }
     state.bullets.forEach(b => {
       if(b.type.includes('vaccine')){
         const target=nearestTumor(b.x,b.y);
@@ -539,6 +606,19 @@
       for(const e of state.enemies.slice()){ const d=Math.hypot(e.x-p.x,e.y-p.y); if(Math.abs(d-p.r)<(e.r+18)&&!p.hit.has(e)){ p.hit.add(e); e.hit({type:'radiation',pierce:0}); } }
     }
     state.pulseRings=state.pulseRings.filter(p=>p.life>0);
+    state.chemoClouds.forEach(c=>{ c.x+=c.vx*dt; c.y+=c.vy*dt; c.vx*=Math.pow(.985,dt*60); c.vy*=Math.pow(.985,dt*60); c.r=Math.min(c.maxR,c.r+88*dt); c.life-=dt; c.phase+=dt*3.2; wrap(c,c.r+20); });
+    const chemoNow=now();
+    for(const c of state.chemoClouds){
+      for(const t of state.tumors.slice()){
+        const d=Math.hypot(t.x-c.x,t.y-c.y);
+        if(d<c.r+t.r*.55 && chemoNow-(c.hits.get(t)||0)>430){ c.hits.set(t,chemoNow); t.hit({type:'chemo',pierce:0}); }
+      }
+      for(const e of state.enemies.slice()){
+        const d=Math.hypot(e.x-c.x,e.y-c.y);
+        if(d<c.r+e.r*.65 && chemoNow-(c.hits.get(e)||0)>520){ c.hits.set(e,chemoNow); e.hit({type:'chemo',pierce:0}); }
+      }
+    }
+    state.chemoClouds=state.chemoClouds.filter(c=>c.life>0);
     state.shake=Math.max(0,state.shake-dt*36);
 
     for(const b of state.bullets.slice()){
@@ -567,11 +647,41 @@
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,300+i*40,0,TAU); ctx.fill();
     }
     ctx.restore();
-    for(const s of state.stars){
-      const a=.38+s.z*.4+Math.sin(s.tw*2+s.x)*.15; ctx.globalAlpha=clamp(a,0,1);
-      ctx.fillStyle=s.z>1?'#fff':'#bfefff'; ctx.fillRect(s.x,s.y,s.r*s.z,s.r*s.z);
-    }
+    state.stars.forEach(drawBioBackground);
     ctx.globalAlpha=1;
+  }
+
+  function drawBioBackground(s){
+    const alpha=clamp(.18+s.z*.26+Math.sin(s.tw*2+s.x)*.08, .08, .62);
+    const scale=.55+s.z*.55;
+    ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(s.rot+Math.sin(s.tw)*.18); ctx.scale(scale,scale); ctx.globalAlpha=alpha;
+    ctx.strokeStyle=s.color; ctx.fillStyle=s.color; ctx.lineWidth=1.15; ctx.shadowBlur=0;
+    if(s.kind==='dna'){
+      ctx.beginPath();
+      for(let i=-5;i<=5;i++){
+        const y=i*2.1, x=Math.sin(i*.9+s.tw)*3.2;
+        if(i===-5) ctx.moveTo(x-3,y); else ctx.lineTo(x-3,y);
+      }
+      ctx.stroke();
+      ctx.beginPath();
+      for(let i=-5;i<=5;i++){
+        const y=i*2.1, x=-Math.sin(i*.9+s.tw)*3.2;
+        if(i===-5) ctx.moveTo(x+3,y); else ctx.lineTo(x+3,y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha=alpha*.75;
+      for(let i=-4;i<=4;i+=2){ ctx.beginPath(); ctx.moveTo(-3.2,i*2.1); ctx.lineTo(3.2,i*2.1); ctx.stroke(); }
+    } else if(s.kind==='protein'){
+      for(let i=0;i<5;i++){ ctx.beginPath(); ctx.arc((i-2)*3.5, Math.sin(i+s.tw)*2.2, 1.45, 0, TAU); ctx.fill(); }
+    } else if(s.kind==='nucleotide'){
+      ctx.beginPath(); ctx.arc(0,0,4.6,0,TAU); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-4.8,0); ctx.lineTo(4.8,0); ctx.moveTo(0,-4.8); ctx.lineTo(0,4.8); ctx.stroke();
+    } else if(s.kind==='marker'){
+      ctx.beginPath(); ctx.roundRect(-6,-1.8,12,3.6,1.8); ctx.fill();
+    } else {
+      ctx.fillRect(-s.r,-s.r,s.r*2,s.r*2);
+    }
+    ctx.restore();
   }
 
   function drawBullet(b){
@@ -588,12 +698,12 @@
   }
 
   function drawPowerup(p){
-    const colors={rapid:FH.gold, shield:FH.green, triple:FH.cyan, thrust:'#ffffff', vaccine:FH.violet, life:FH.red, radpulse:FH.gold}; const c=colors[p.type]||'#fff';
+    const colors={rapid:FH.gold, shield:FH.green, triple:FH.cyan, thrust:'#ffffff', vaccine:FH.violet, grant:FH.red, radpulse:FH.gold, chemo:FH.green}; const c=colors[p.type]||'#fff';
     ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.pulse*.3); ctx.globalAlpha=clamp(p.life/900,0,1);
     ctx.shadowBlur=22; ctx.shadowColor=c; ctx.strokeStyle=c; ctx.lineWidth=2; ctx.fillStyle='rgba(8,18,36,.86)';
     ctx.beginPath(); ctx.roundRect(-17,-17,34,34,8); ctx.fill(); ctx.stroke();
     ctx.fillStyle=c; ctx.font='bold 17px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    const icon={rapid:'⚡', shield:'◌', triple:'≋', thrust:'▲', vaccine:'m', life:'+', radpulse:'☢'}[p.type]||'?'; ctx.fillText(icon,0,1);
+    const icon={rapid:'⚡', shield:'◌', triple:'≋', thrust:'▲', vaccine:'m', grant:'R', radpulse:'☢', chemo:'C'}[p.type]||'?'; ctx.fillText(icon,0,1);
     ctx.restore();
   }
 
@@ -602,10 +712,11 @@
     ctx.font='700 16px system-ui'; ctx.textAlign='left'; ctx.fillStyle='rgba(234,247,255,.96)';
     const panelW=Math.min(380,W-24);
     glass(12,12,panelW,98);
-    ctx.fillStyle='#fff'; ctx.font='900 20px system-ui'; ctx.fillText('Fred Hutch Asteroids',28,40);
+    if(brandMark.complete && brandMark.naturalWidth) ctx.drawImage(brandMark,25,24,24,24);
+    ctx.fillStyle='#fff'; ctx.font='900 20px system-ui'; ctx.fillText('Fred Hutch Asteroids',58,40);
     const s=state.ship;
     ctx.fillStyle='#b9d8e6'; ctx.font='700 14px system-ui'; ctx.fillText(`Score ${state.score.toLocaleString()}   High ${state.high.toLocaleString()}   Wave ${state.wave}`,28,64);
-    ctx.fillText(`Lives ${'♥'.repeat(Math.max(0,state.lives))}  \u2622 ${s ? s.pulseCharges : 0}`,28,86);
+    ctx.fillText(`R01 Grants ${Math.max(0,state.grants)}   Chemo C ${s ? s.chemoCharges : 0}   \u2622 ${s ? s.pulseCharges : 0}`,28,86);
     // Active power timers — separate upper-right panel
     const pwrEntries=Object.entries(s.power).filter(([,v])=>v>0);
     let rY=12;
@@ -624,7 +735,8 @@
       glass(W-168,rY,150,42); ctx.fillStyle=FH.gold; ctx.font='900 18px system-ui'; ctx.textAlign='center'; ctx.fillText(`${state.combo}x Discovery Combo`,W-93,rY+27);
     }
     if(state.message && now()<state.messageUntil){
-      const msg=state.message; ctx.font='700 14px system-ui'; const mw=Math.min(W-40, ctx.measureText(msg).width+36); glass((W-mw)/2,H-86,mw,54); ctx.fillStyle='#eaf7ff'; ctx.textAlign='center'; wrapText(msg,W/2,H-54,mw-30,18);
+      const msg=state.message, toastTop=W<=700 ? H-178 : H-86;
+      ctx.font='700 14px system-ui'; const mw=Math.min(W-40, ctx.measureText(msg).width+36); glass((W-mw)/2,toastTop,mw,54); ctx.fillStyle='#eaf7ff'; ctx.textAlign='center'; wrapText(msg,W/2,toastTop+32,mw-30,18);
     }
     ctx.restore();
   }
@@ -668,10 +780,32 @@
     }
   }
 
+  function drawChemoClouds(){
+    for(const c of state.chemoClouds){
+      const t=clamp(c.life/c.max,0,1), age=1-t;
+      ctx.save();
+      const g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.r);
+      g.addColorStop(0,`rgba(88,255,180,${.16*t})`);
+      g.addColorStop(.56,`rgba(0,171,200,${.11*t})`);
+      g.addColorStop(1,'rgba(88,255,180,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(c.x,c.y,c.r,0,TAU); ctx.fill();
+      ctx.globalAlpha=.48*t; ctx.strokeStyle=FH.green; ctx.lineWidth=2; ctx.setLineDash([5,8]);
+      ctx.beginPath(); ctx.arc(c.x,c.y,c.r*(.72+.08*Math.sin(c.phase)),0,TAU); ctx.stroke(); ctx.setLineDash([]);
+      ctx.globalAlpha=.62*t; ctx.fillStyle=FH.green;
+      for(let i=0;i<18;i++){
+        const a=i/18*TAU+c.phase*.38, rr=c.r*(.18+((i*29)%70)/100);
+        const x=c.x+Math.cos(a)*rr, y=c.y+Math.sin(a*1.13)*rr;
+        ctx.beginPath(); ctx.ellipse(x,y,2.5+age*1.5,1.2, a,0,TAU); ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
   function render(){
     drawBackground();
     if(state.shake>0){ ctx.save(); ctx.translate(rand(-state.shake,state.shake),rand(-state.shake,state.shake)); }
     state.powerups.forEach(drawPowerup);
+    drawChemoClouds();
     state.bullets.forEach(drawBullet);
     state.enemyBullets.forEach(drawEnemyBullet);
     state.tumors.forEach(t=>t.draw());
